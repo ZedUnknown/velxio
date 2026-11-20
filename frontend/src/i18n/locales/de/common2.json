@@ -679,6 +679,22 @@
       "showOutput": "Ausgabe anzeigen",
       "hide": "Ausblenden (Kompilierung läuft weiter)"
     },
+    "timeline": {
+      "fileRenamed": "Datei umbenannt",
+      "fileSaved": "Datei gespeichert",
+      "selectFile": "Wähle eine Datei, um ihren Verlauf zu sehen.",
+      "saveProject": "Speichere das Projekt, um den Dateiverlauf zu starten.",
+      "loadFailed": "Lokaler Dateiverlauf konnte nicht gelesen werden.",
+      "loading": "Dateiverlauf wird geladen…",
+      "empty": "Diese Datei wurde noch nicht lokal gespeichert.",
+      "title": "Zeitachse",
+      "now": "jetzt",
+      "savedVersion": "Gespeicherte Version",
+      "currentFile": "Aktuelle Datei",
+      "compareVersion": "Gespeicherte Version vergleichen",
+      "loadingComparison": "Vergleich wird geladen…",
+      "restore": "Version wiederherstellen"
+    },
     "newProject": {
       "title": "Neues Projekt starten",
       "subtitle": "Wähle einen leeren Arbeitsbereich oder ein Board mit Blink-Beispiel. Der aktuelle Arbeitsbereich wird ersetzt.",

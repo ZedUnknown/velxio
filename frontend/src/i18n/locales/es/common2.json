@@ -686,6 +686,22 @@
       "showOutput": "Mostrar salida",
       "hide": "Ocultar (la compilación continúa)"
     },
+    "timeline": {
+      "fileRenamed": "Archivo renombrado",
+      "fileSaved": "Archivo guardado",
+      "selectFile": "Selecciona un archivo para ver su historial.",
+      "saveProject": "Guarda el proyecto para empezar a registrar el historial.",
+      "loadFailed": "No se pudo leer el historial local del archivo.",
+      "loading": "Cargando historial del archivo…",
+      "empty": "Aún no hay versiones locales guardadas de este archivo.",
+      "title": "Cronología",
+      "now": "ahora",
+      "savedVersion": "Versión guardada",
+      "currentFile": "Archivo actual",
+      "compareVersion": "Comparar versión guardada",
+      "loadingComparison": "Cargando comparación…",
+      "restore": "Restaurar versión"
+    },
     "localProjects": {
       "unsavedStatus": "Cambios sin guardar",
       "openList": "Proyectos guardados · {{name}}",

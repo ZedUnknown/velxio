@@ -693,6 +693,22 @@
       "themePreviewActive": "Theme preview is active.",
       "vscodeThemeLocation": "On Windows, open <path>{{extensions}}</path> in File Explorer. Open the theme’s extension folder and import its theme JSON file, such as <path>{{themeFile}}</path>."
     },
+    "timeline": {
+      "fileRenamed": "File Renamed",
+      "fileSaved": "File Saved",
+      "selectFile": "Select a file to see its save history.",
+      "saveProject": "Save this project to start recording file history.",
+      "loadFailed": "Could not read local file history.",
+      "loading": "Loading file history…",
+      "empty": "This file has no local saves yet.",
+      "title": "Timeline",
+      "now": "now",
+      "savedVersion": "Saved version",
+      "currentFile": "Current file",
+      "compareVersion": "Compare saved version",
+      "loadingComparison": "Loading comparison…",
+      "restore": "Restore version"
+    },
     "localProjects": {
       "unsavedStatus": "Unsaved changes",
       "openList": "Saved projects · {{name}}",

@@ -679,6 +679,22 @@
       "showOutput": "出力を表示",
       "hide": "非表示（コンパイルは継続）"
     },
+    "timeline": {
+      "fileRenamed": "ファイル名を変更",
+      "fileSaved": "ファイルを保存",
+      "selectFile": "履歴を表示するファイルを選択してください。",
+      "saveProject": "ファイルの履歴を記録するにはプロジェクトを保存してください。",
+      "loadFailed": "ローカルのファイル履歴を読み込めませんでした。",
+      "loading": "ファイル履歴を読み込み中…",
+      "empty": "このファイルはまだローカルに保存されていません。",
+      "title": "タイムライン",
+      "now": "たった今",
+      "savedVersion": "保存済みバージョン",
+      "currentFile": "現在のファイル",
+      "compareVersion": "保存済みバージョンと比較",
+      "loadingComparison": "比較を読み込み中…",
+      "restore": "バージョンを復元"
+    },
     "newProject": {
       "title": "新しいプロジェクトを開始",
       "subtitle": "空のワークスペース、または Blink サンプル付きのボードを選択します。現在のワークスペースの内容は置き換わります。",

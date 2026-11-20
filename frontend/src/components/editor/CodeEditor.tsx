@@ -1,5 +1,5 @@
 import Editor, { type Monaco } from '@monaco-editor/react';
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { editor as MonacoEditor } from 'monaco-editor';
@@ -57,6 +57,13 @@ export const CodeEditor = ({ ref, statusBarHost }: {
     editor: MonacoEditor.IStandaloneCodeEditor;
   } | null>(null);
   const instance = mounted?.key === mountKey ? mounted.editor : null;
+  // The controlled editor applies external file changes, such as a Timeline
+  // restore, after layout. Keep each replacement separate from preceding edits.
+  useLayoutEffect(() => {
+    if (instance && activeFile && !manifestViewBoardId && instance.getValue() !== activeFile.content) {
+      instance.pushUndoStop();
+    }
+  }, [instance, activeFile, manifestViewBoardId]);
   const monacoRef = useRef<Monaco | null>(null);
 
 

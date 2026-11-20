@@ -679,6 +679,22 @@
       "showOutput": "Mostrar saída",
       "hide": "Ocultar (a compilação continua)"
     },
+    "timeline": {
+      "fileRenamed": "Arquivo renomeado",
+      "fileSaved": "Arquivo salvo",
+      "selectFile": "Selecione um arquivo para ver seu histórico.",
+      "saveProject": "Salve este projeto para começar a registrar o histórico dos arquivos.",
+      "loadFailed": "Não foi possível ler o histórico local do arquivo.",
+      "loading": "Carregando histórico do arquivo…",
+      "empty": "Este arquivo ainda não tem versões locais salvas.",
+      "title": "Linha do tempo",
+      "now": "agora",
+      "savedVersion": "Versão salva",
+      "currentFile": "Arquivo atual",
+      "compareVersion": "Comparar versão salva",
+      "loadingComparison": "Carregando comparação…",
+      "restore": "Restaurar versão"
+    },
     "newProject": {
       "title": "Criar um novo projeto",
       "subtitle": "Escolha um espaço vazio ou uma placa com o exemplo Blink. O espaço de trabalho atual será substituído.",

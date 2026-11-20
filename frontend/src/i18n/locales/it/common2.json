@@ -679,6 +679,22 @@
       "showOutput": "Mostra output",
       "hide": "Nascondi (la compilazione continua)"
     },
+    "timeline": {
+      "fileRenamed": "File rinominato",
+      "fileSaved": "File salvato",
+      "selectFile": "Seleziona un file per vederne la cronologia.",
+      "saveProject": "Salva il progetto per iniziare a registrare la cronologia dei file.",
+      "loadFailed": "Impossibile leggere la cronologia locale del file.",
+      "loading": "Caricamento della cronologia del file…",
+      "empty": "Il file non ha ancora versioni locali salvate.",
+      "title": "Cronologia",
+      "now": "ora",
+      "savedVersion": "Versione salvata",
+      "currentFile": "File corrente",
+      "compareVersion": "Confronta versione salvata",
+      "loadingComparison": "Caricamento del confronto…",
+      "restore": "Ripristina versione"
+    },
     "newProject": {
       "title": "Crea un nuovo progetto",
       "subtitle": "Scegli un’area vuota o una scheda con l’esempio Blink. L’area di lavoro attuale verrà sostituita.",

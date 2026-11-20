@@ -679,6 +679,22 @@
       "showOutput": "Afficher la sortie",
       "hide": "Masquer (la compilation continue)"
     },
+    "timeline": {
+      "fileRenamed": "Fichier renommé",
+      "fileSaved": "Fichier enregistré",
+      "selectFile": "Sélectionnez un fichier pour afficher son historique.",
+      "saveProject": "Enregistrez ce projet pour commencer à suivre l’historique des fichiers.",
+      "loadFailed": "Impossible de lire l’historique local du fichier.",
+      "loading": "Chargement de l’historique du fichier…",
+      "empty": "Ce fichier n’a encore aucune version locale enregistrée.",
+      "title": "Historique",
+      "now": "à l’instant",
+      "savedVersion": "Version enregistrée",
+      "currentFile": "Fichier actuel",
+      "compareVersion": "Comparer la version enregistrée",
+      "loadingComparison": "Chargement de la comparaison…",
+      "restore": "Restaurer la version"
+    },
     "newProject": {
       "title": "Créer un projet",
       "subtitle": "Choisissez un espace vide ou une carte avec l’exemple Blink. L’espace de travail actuel sera remplacé.",

@@ -16,6 +16,7 @@ import { importProjectFile, PROJECT_FILE_ACCEPT } from '../../utils/importProjec
 import { retargetBoardWires } from '../../utils/wokwiZip';
 import { showMessageDialog, showConfirmDialog } from '../../store/useMessageDialogStore';
 import { registerEditorCommand, runEditorCommand } from '../../lib/editorCommands';
+import { FileTimeline } from './FileTimeline';
 import './FileExplorer.css';
 
 const CHIP_IMAGE_MAX_BYTES = 256 * 1024;
@@ -1533,6 +1534,7 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onShowExplorer }) =>
         )}
       </div>
 
+      <FileTimeline groupId={activeGroupId} file={manifestViewBoardId ? undefined : activeFile} />
 
       {contextMenu && (
         <div

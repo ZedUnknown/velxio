@@ -679,6 +679,22 @@
       "showOutput": "显示输出",
       "hide": "隐藏（编译继续进行）"
     },
+    "timeline": {
+      "fileRenamed": "文件已重命名",
+      "fileSaved": "文件已保存",
+      "selectFile": "选择文件以查看其保存历史。",
+      "saveProject": "保存此项目后开始记录文件历史。",
+      "loadFailed": "无法读取本地文件历史。",
+      "loading": "正在加载文件历史…",
+      "empty": "此文件尚无本地保存记录。",
+      "title": "时间线",
+      "now": "刚刚",
+      "savedVersion": "已保存版本",
+      "currentFile": "当前文件",
+      "compareVersion": "比较已保存版本",
+      "loadingComparison": "正在加载比较…",
+      "restore": "恢复版本"
+    },
     "newProject": {
       "title": "新建项目",
       "subtitle": "选择空白工作区，或选择带 Blink 示例的开发板。当前工作区内容将被替换。",

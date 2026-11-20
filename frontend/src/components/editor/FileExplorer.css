@@ -397,6 +397,152 @@
 .fe-folder-actions .fe-folder-delete:hover {
   color: var(--color-feedback-error);
 }
+.file-explorer-timeline {
+  flex-shrink: 0;
+  max-height: min(40%, 220px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--wb-7) transparent;
+  border-top: 1px solid var(--wb-6);
+  color: var(--wb-12);
+  font-size: 12px;
+}
+
+.file-explorer-timeline summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-block-size: 24px;
+  padding-inline: 7px;
+  background: var(--wb-3);
+  cursor: pointer;
+  list-style: none;
+}
+
+.file-explorer-timeline summary::-webkit-details-marker {
+  display: none;
+}
+
+.file-explorer-timeline-chevron {
+  flex: none;
+}
+
+.file-explorer-timeline[open] .file-explorer-timeline-chevron {
+  transform: rotate(90deg);
+}
+
+.file-explorer-timeline-text-container {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.file-explorer-timeline-title {
+  flex: none;
+  color: var(--wb-11);
+  font-size: 10px;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+.file-explorer-timeline-file {
+  flex: none;
+  min-width: 0;
+  margin-inline-start: 3px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--wb-11);
+  font-size: 10px;
+}
+
+.file-explorer-timeline ol {
+  list-style: none;
+  padding: 0 0 3px;
+  margin: 0;
+}
+
+.file-explorer-timeline-entry {
+  display: grid;
+  inline-size: 100%;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 22px;
+  padding: 1px 7px 1px 13px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.file-explorer-timeline-entry:is(:hover, [data-active]) {
+  background: var(--color-accent-soft);
+  color: var(--wb-13);
+}
+
+.file-explorer-timeline-entry:focus-visible {
+  outline: 1px solid var(--color-action-primary);
+  outline-offset: -1px;
+}
+
+.file-explorer-timeline-dot {
+  inline-size: 8px;
+  block-size: 8px;
+  border: 1.5px solid var(--wb-11);
+  border-radius: 50%;
+}
+
+.file-explorer-timeline-entry > span:nth-child(2) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.file-explorer-timeline-entry > time {
+  color: var(--wb-11);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.file-explorer-timeline > p {
+  margin: 0;
+  padding: 3px 12px 8px;
+  color: var(--wb-11);
+}
+
+.file-explorer-timeline-tooltip {
+  position: fixed;
+  z-index: 200;
+  visibility: hidden;
+  max-inline-size: min(250px, calc(100vw - 16px));
+  padding: 5px 8px;
+  border: 1px solid var(--wb-7);
+  border-radius: 4px;
+  background: var(--workspace-menu-background, var(--wb-5));
+  color: var(--workspace-menu-foreground, var(--wb-13));
+  box-shadow: var(--shadow-2);
+  font-size: 12px;
+}
+
+.file-explorer-timeline-tooltip time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-block-end: 4px;
+  padding-block-end: 4px;
+  border-block-end: 1px solid var(--wb-7);
+}
+
+.file-explorer-timeline-tooltip svg {
+  flex: none;
+}
 
 .file-version-comparison {
   inline-size: min(1240px, calc(100vw - 24px));
