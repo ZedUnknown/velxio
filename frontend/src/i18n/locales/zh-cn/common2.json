@@ -206,9 +206,16 @@
         "copy": "复制开发板 (Ctrl+C)",
         "paste": "粘贴 (Ctrl+V)"
       },
+      "addNodeHere": "在此添加节点",
+      "probeWire": "添加到示波器",
+      "probeNothing": "此导线尚无可测信号。请连接开发板引脚，或运行电路以计算电压。",
       "selectedBoard": "已选开发板",
+      "diagnostics": "电路诊断",
+      "spiceDidNotConverge": "分析未收敛。",
+      "esp32RuntimeFault": "{{board}} 报告运行时错误，仿真已停止。",
       "addComponents": "添加元件",
-      "circuitCanvas": "电路画布"
+      "circuitCanvas": "电路画布",
+      "centerCircuit": "居中显示电路"
     },
     "componentPicker": {
       "title": "添加元件",

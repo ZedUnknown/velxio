@@ -37,6 +37,7 @@ import { ComponentCameraToggles } from './ComponentCameraToggles';
 import { WireLayer } from './WireLayer';
 import type { SegmentHandle, WaypointHandle, AlignmentGuide } from './WireLayer';
 import { ElectricalOverlay } from '../analog-ui/ElectricalOverlay';
+import { CanvasDiagnostics } from './CanvasDiagnostics';
 import { BoardOnCanvas } from './BoardOnCanvas';
 import { boardBox, boardSize, normalizeRotation, normalizeScale } from '../../utils/boardGeometry';
 import { BoardDock } from './BoardDock';
@@ -3680,6 +3681,7 @@ export const SimulatorCanvas = ({
             <LocateFixed size={16} aria-hidden />
           </button>
         </div>
+        <CanvasDiagnostics />
       </div>
 
       {/* Touch-friendly pin picker — used to pick a pin from a list when the

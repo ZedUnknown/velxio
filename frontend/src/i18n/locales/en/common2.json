@@ -210,8 +210,12 @@
         "paste": "Paste (Ctrl+V)"
       },
       "selectedBoard": "Selected board",
+      "diagnostics": "Circuit diagnostics",
+      "spiceDidNotConverge": "Analysis did not converge.",
+      "esp32RuntimeFault": "Simulation stopped after {{board}} reported a runtime error.",
       "addComponents": "Add components",
-      "circuitCanvas": "Circuit canvas"
+      "circuitCanvas": "Circuit canvas",
+      "centerCircuit": "Center circuit"
     },
     "componentPicker": {
       "title": "Add Component",

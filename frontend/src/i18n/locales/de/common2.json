@@ -206,9 +206,16 @@
         "copy": "Board kopieren (Strg+C)",
         "paste": "Einfügen (Strg+V)"
       },
+      "addNodeHere": "Knoten hier hinzufügen",
+      "probeWire": "Zum Oszilloskop hinzufügen",
+      "probeNothing": "Diese Leitung liefert noch kein messbares Signal. Verbinde sie mit einem Pin oder starte die Schaltung, damit eine Spannung berechnet wird.",
       "selectedBoard": "Ausgewähltes Board",
+      "diagnostics": "Schaltungsdiagnose",
+      "spiceDidNotConverge": "Die Analyse ist nicht konvergiert.",
+      "esp32RuntimeFault": "Simulation gestoppt: {{board}} hat einen Laufzeitfehler gemeldet.",
       "addComponents": "Bauteile hinzufügen",
-      "circuitCanvas": "Schaltungsfläche"
+      "circuitCanvas": "Schaltungsfläche",
+      "centerCircuit": "Schaltung zentrieren"
     },
     "componentPicker": {
       "title": "Komponente hinzufügen",

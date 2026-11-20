@@ -206,9 +206,16 @@
         "copy": "Copier la carte (Ctrl+C)",
         "paste": "Coller (Ctrl+V)"
       },
+      "addNodeHere": "Ajouter un nœud ici",
+      "probeWire": "Ajouter à l’oscilloscope",
+      "probeNothing": "Ce fil ne transmet pas encore de signal mesurable. Reliez-le à une broche ou lancez le circuit pour calculer sa tension.",
       "selectedBoard": "Carte sélectionnée",
+      "diagnostics": "Diagnostic du circuit",
+      "spiceDidNotConverge": "L’analyse n’a pas convergé.",
+      "esp32RuntimeFault": "Simulation arrêtée : {{board}} a signalé une erreur d’exécution.",
       "addComponents": "Ajouter des composants",
-      "circuitCanvas": "Zone du circuit"
+      "circuitCanvas": "Zone du circuit",
+      "centerCircuit": "Centrer le circuit"
     },
     "componentPicker": {
       "title": "Ajouter un composant",

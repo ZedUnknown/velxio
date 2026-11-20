@@ -35,7 +35,7 @@ describe.each([
         componentId,
         componentMetadata: metadata,
         componentProperties: { key },
-
+        position: { x: 0, y: 0 },
         pinInfo: [],
         onClose,
         onDelete: vi.fn(),

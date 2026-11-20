@@ -206,9 +206,16 @@
         "copy": "Copiar placa (Ctrl+C)",
         "paste": "Colar (Ctrl+V)"
       },
+      "addNodeHere": "Adicionar nó aqui",
+      "probeWire": "Adicionar ao osciloscópio",
+      "probeNothing": "Este fio ainda não tem sinal mensurável. Conecte-o a um pino ou execute o circuito para calcular a tensão.",
       "selectedBoard": "Placa selecionada",
+      "diagnostics": "Diagnóstico do circuito",
+      "spiceDidNotConverge": "A análise não convergiu.",
+      "esp32RuntimeFault": "Simulação interrompida: {{board}} informou um erro de execução.",
       "addComponents": "Adicionar componentes",
-      "circuitCanvas": "Área do circuito"
+      "circuitCanvas": "Área do circuito",
+      "centerCircuit": "Centralizar circuito"
     },
     "componentPicker": {
       "title": "Adicionar Componente",

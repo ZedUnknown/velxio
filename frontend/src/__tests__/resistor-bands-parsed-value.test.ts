@@ -169,7 +169,6 @@ describe('the inspector preview draws the same bands (#230)', () => {
           componentId: 'r1',
           componentMetadata: metadata,
           componentProperties: { value: '1M' },
-          position: { x: 0, y: 0 },
           pinInfo: [],
           onClose: () => {},
           onDelete: () => {},

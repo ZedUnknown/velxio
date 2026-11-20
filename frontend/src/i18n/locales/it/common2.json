@@ -206,9 +206,16 @@
         "copy": "Copia scheda (Ctrl+C)",
         "paste": "Incolla (Ctrl+V)"
       },
+      "addNodeHere": "Aggiungi nodo qui",
+      "probeWire": "Aggiungi all’oscilloscopio",
+      "probeNothing": "Questo filo non ha ancora un segnale misurabile. Collegalo a un pin o esegui il circuito per calcolarne la tensione.",
       "selectedBoard": "Scheda selezionata",
+      "diagnostics": "Diagnostica del circuito",
+      "spiceDidNotConverge": "L’analisi non è convergente.",
+      "esp32RuntimeFault": "Simulazione interrotta: {{board}} ha segnalato un errore di esecuzione.",
       "addComponents": "Aggiungi componenti",
-      "circuitCanvas": "Area del circuito"
+      "circuitCanvas": "Area del circuito",
+      "centerCircuit": "Centra circuito"
     },
     "componentPicker": {
       "title": "Aggiungi componente",

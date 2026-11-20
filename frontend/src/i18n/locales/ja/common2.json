@@ -206,9 +206,16 @@
         "copy": "ボードをコピー (Ctrl+C)",
         "paste": "貼り付け (Ctrl+V)"
       },
+      "addNodeHere": "ここにノードを追加",
+      "probeWire": "オシロスコープに追加",
+      "probeNothing": "この配線にはまだ測定できる信号がありません。ピンに接続するか回路を実行して電圧を計算してください。",
       "selectedBoard": "選択中のボード",
+      "diagnostics": "回路診断",
+      "spiceDidNotConverge": "解析が収束しませんでした。",
+      "esp32RuntimeFault": "{{board}} が実行時エラーを報告したため、シミュレーションを停止しました。",
       "addComponents": "部品を追加",
-      "circuitCanvas": "回路キャンバス"
+      "circuitCanvas": "回路キャンバス",
+      "centerCircuit": "回路を中央に配置"
     },
     "componentPicker": {
       "title": "コンポーネントを追加",
