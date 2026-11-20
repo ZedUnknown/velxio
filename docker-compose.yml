@@ -11,6 +11,7 @@ services:
       dockerfile: Dockerfile.standalone
       args:
         QEMU_RELEASE_URL: ${QEMU_RELEASE_URL:-}
+        VELXIO_INSTALL_LANGUAGE_SERVERS: ${VELXIO_ENABLE_LANGUAGE_SERVERS:-0}
       secrets:
         - qemu_license_key
     container_name: velxio-dev
@@ -26,6 +27,8 @@ services:
       # QEMU download settings belong to the build args and secret above.
       - VELXIO_LICENSE_KEY=
       - QEMU_RELEASE_URL=
+      # Use the same flag as the build so the tools are present when enabled.
+      - VELXIO_ENABLE_LANGUAGE_SERVERS=${VELXIO_ENABLE_LANGUAGE_SERVERS:-0}
       - DATABASE_URL=sqlite+aiosqlite:////app/data/velxio.db
       - DATA_DIR=/app/data
       - IDF_PATH=/opt/esp-idf

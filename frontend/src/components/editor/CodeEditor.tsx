@@ -1,5 +1,5 @@
 import Editor, { type Monaco } from '@monaco-editor/react';
-import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, useSyncExternalStore, type Ref } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { editor as MonacoEditor } from 'monaco-editor';
@@ -8,8 +8,14 @@ import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { useCompileLogsStore } from '../../store/useCompileLogsStore';
 import { registerRetroAsm } from './retroAsmLanguage';
 import { attachIntellisenseMonaco } from '../../lib/intellisenseRegistry';
-import { includePathPrefix } from '../../lib/arduinoSymbols';
-import { bindIntellisenseModel, completionWasInterrupted, registerEditorIntellisense, workspaceModelPath } from '../../lib/editorIntellisense';
+import { getLibraryRevision, includePathPrefix, subscribeLibraryRevision } from '../../lib/arduinoSymbols';
+import {
+  bindIntellisenseModel, completionWasInterrupted, OPEN_DEPENDENCY, registerEditorIntellisense, workspaceModelPath,
+  type DependencyPreview,
+} from '../../lib/editorIntellisense';
+import {
+  semanticContext, semanticFile, SemanticSession, type SemanticContext,
+} from '../../lib/semanticIntellisense';
 import { CHIP_JSON_SCHEMA, CHIP_JSON_SCHEMA_URI } from './chipJsonSchema';
 import { defineVelxioThemes, monacoThemeFor } from './monacoThemes';
 import { useResolvedTheme } from '../../hooks/useTheme';
@@ -65,11 +71,46 @@ export const CodeEditor = ({ ref, statusBarHost }: {
     if (instance && !manifestViewBoardId) return keepSuggestionsInEditor(instance);
   }, [instance, manifestViewBoardId]);
   const monacoRef = useRef<Monaco | null>(null);
+  const session = useRef<SemanticSession | null>(null);
+  const [dependency, setDependency] = useState<DependencyPreview | null>(null);
+  const dependencyDialog = useRef<HTMLDialogElement>(null);
+  const libraryRevision = useSyncExternalStore(subscribeLibraryRevision, getLibraryRevision, getLibraryRevision);
+  const boardId = boards.find((board) => board.activeFileGroupId === activeGroupId)?.id;
+  const context = semanticContext(boards.find((board) => board.id === boardId));
+  const semanticKey = context
+    ? JSON.stringify([boardId, activeGroupId, context, files.filter((file) => semanticFile(file, context.engine))
+        .map(({ id, name }) => [id, name]), libraryRevision])
+    : null;
+
+  useLayoutEffect(() => {
+    if (!semanticKey) return;
+    const [, groupId, context, fileKeys] = JSON.parse(semanticKey) as [
+      string, string, SemanticContext, [string, string][], number,
+    ];
+    if (!fileKeys.length) return;
+    const getFiles = () => useEditorStore.getState().getGroupFiles(groupId)
+      .filter((file) => semanticFile(file, context.engine));
+    const next = new SemanticSession(context, getFiles());
+    session.current = next;
+    // Subscribe outside React so a completion requested immediately after a
+    // keystroke sees the draft already sent to the language server.
+    const unsubscribe = useEditorStore.subscribe((current, previous) => {
+      if (current.fileGroups[groupId] !== previous.fileGroups[groupId]) next.update(getFiles());
+    });
+    return () => {
+      unsubscribe();
+      next.dispose();
+      session.current = null;
+    };
+  }, [semanticKey]);
+
   useLayoutEffect(() => {
     const model = instance?.getModel();
-    if (!instance || !model || !activeFile || manifestViewBoardId) return;
+    const monaco = monacoRef.current;
+    if (!instance || !model || !monaco || !activeFile || manifestViewBoardId) return;
+    const activeSession = session.current;
     const unbind = bindIntellisenseModel(model, {
-      groupId: activeGroupId, fileId: activeFile.id,
+      groupId: activeGroupId, fileId: activeFile.id, session: activeSession,
       refreshSuggestions(position) {
         if (instance.getPosition()?.equals(position) && instance.hasTextFocus() &&
             instance.getDomNode()?.querySelector('.suggest-widget.visible')) {
@@ -79,9 +120,42 @@ export const CodeEditor = ({ ref, statusBarHost }: {
         }
       },
     });
-    return unbind;
-  }, [instance, activeGroupId, activeFile?.id, manifestViewBoardId]);
+    const updateMarkers = () => {
+      if (model.isDisposed()) return;
+      const markers = activeSession?.getDiagnostics(activeFile.name, model.getValue()).map((item) => ({
+        source: 'Language server',
+        message: item.message,
+        severity: item.severity === 1 ? monaco.MarkerSeverity.Error :
+          item.severity === 2 ? monaco.MarkerSeverity.Warning :
+          item.severity === 4 ? monaco.MarkerSeverity.Hint : monaco.MarkerSeverity.Info,
+        startLineNumber: item.range.start.line + 1,
+        startColumn: item.range.start.character + 1,
+        endLineNumber: item.range.end.line + 1,
+        endColumn: item.range.end.character + 1,
+      })) ?? [];
+      monaco.editor.setModelMarkers(model, 'velxio-semantic', markers);
+    };
+    const unsubscribe = activeSession?.subscribe(updateMarkers);
+    const edit = model.onDidChangeContent(updateMarkers);
+    updateMarkers();
+    return () => {
+      edit.dispose();
+      unsubscribe?.();
+      unbind();
+      if (!model.isDisposed()) monaco.editor.setModelMarkers(model, 'velxio-semantic', []);
+    };
+  }, [instance, activeGroupId, activeFile?.id, activeFile?.name, manifestViewBoardId, semanticKey]);
 
+  useEffect(() => {
+    const preview = (event: Event) => setDependency((event as CustomEvent<DependencyPreview>).detail);
+    window.addEventListener(OPEN_DEPENDENCY, preview);
+    return () => window.removeEventListener(OPEN_DEPENDENCY, preview);
+  }, []);
+
+  useEffect(() => {
+    const dialog = dependencyDialog.current;
+    if (dialog && !dialog.open) dialog.showModal();
+  }, [dependency]);
 
   const compileLogs = useCompileLogsStore((state) => state.logs);
   useEffect(() => {
@@ -459,6 +533,32 @@ export const CodeEditor = ({ ref, statusBarHost }: {
           suggest: { snippetsPreventQuickSuggestions: false },
         }}
       />
+      {dependency && (
+        <dialog
+          className="editor-dependency-preview"
+          ref={dependencyDialog}
+          aria-label={dependency.name}
+          onCancel={() => setDependency(null)}
+        >
+          <header>
+            <strong>{dependency.name}</strong>
+            <button type="button" onClick={() => setDependency(null)}>{t('common.close', 'Close')}</button>
+          </header>
+          <Editor
+            height="100%"
+            theme={theme}
+            language={getEditorLanguage(dependency.name)}
+            value={dependency.content}
+            options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: false }}
+            onMount={(editor) => {
+              const position = { lineNumber: dependency.lineNumber, column: dependency.column };
+              editor.setPosition(position);
+              editor.revealPositionInCenter(position);
+              editor.focus();
+            }}
+          />
+        </dialog>
+      )}
       {statusBar}
       {languagePickerKey === editorKey && activeFile && canRenameLanguage && (
         <EditorLanguagePicker

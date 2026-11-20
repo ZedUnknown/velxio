@@ -8,6 +8,8 @@ import {
 } from './arduinoSymbols';
 import { hasIntellisenseImpl } from './intellisenseRegistry';
 import type { Candidate } from './codeCompletions';
+import { revealWorkspaceFile } from './workspaceNavigation';
+import type { LspRange, SemanticSession } from './semanticIntellisense';
 import { useEditorStore, type WorkspaceFile } from '../store/useEditorStore';
 import { useSimulatorStore } from '../store/useSimulatorStore';
 
@@ -16,9 +18,55 @@ type Monaco = typeof import('monaco-editor');
 interface Binding {
   groupId: string;
   fileId: string;
+  session: SemanticSession | null;
   refreshSuggestions: (position: Position) => void;
 }
 
+interface Markup {
+  kind?: string;
+  language?: string;
+  value: string;
+}
+type Documentation = string | Markup;
+interface Edit {
+  newText: string;
+  range?: LspRange;
+  insert?: LspRange;
+  replace?: LspRange;
+}
+interface Completion {
+  label: string;
+  kind?: number;
+  detail?: string;
+  documentation?: Documentation;
+  insertText?: string;
+  insertTextFormat?: number;
+  filterText?: string;
+  sortText?: string;
+  textEdit?: Edit;
+  additionalTextEdits?: Edit[];
+}
+
+interface Signature {
+  label: string;
+  documentation?: Documentation;
+  parameters?: { label: string | [number, number]; documentation?: Documentation }[];
+}
+
+interface Definition {
+  name: string;
+  range: LspRange;
+  dependency?: { id: string; content: string };
+}
+
+export interface DependencyPreview {
+  name: string;
+  content: string;
+  lineNumber: number;
+  column: number;
+}
+
+export const OPEN_DEPENDENCY = 'velxio-open-intellisense-dependency';
 const bindings = new WeakMap<editor.ITextModel, Binding>();
 const installed = new WeakSet<Monaco>();
 const pendingCompletions = new WeakMap<editor.ITextModel, { version: number }>();
@@ -103,6 +151,90 @@ function snapshot(model: editor.ITextModel, token: CancellationToken) {
   };
 }
 
+function range(monaco: Monaco, span: LspRange) {
+  return new monaco.Range(
+    span.start.line + 1,
+    span.start.character + 1,
+    span.end.line + 1,
+    span.end.character + 1,
+  );
+}
+
+function markdown(value: Documentation | undefined) {
+  if (!value) return undefined;
+  if (typeof value === 'string') return { value };
+  if (value.language) return { value: `~~~${value.language}\n${value.value}\n~~~` };
+  return { value: value.value };
+}
+
+function completionItems(
+  monaco: Monaco,
+  model: editor.ITextModel,
+  position: Position,
+  items: Completion[],
+): languages.CompletionItem[] {
+  const kinds = monaco.languages.CompletionItemKind;
+  const byLspKind = [
+    kinds.Text,
+    kinds.Method,
+    kinds.Function,
+    kinds.Constructor,
+    kinds.Field,
+    kinds.Variable,
+    kinds.Class,
+    kinds.Interface,
+    kinds.Module,
+    kinds.Property,
+    kinds.Unit,
+    kinds.Value,
+    kinds.Enum,
+    kinds.Keyword,
+    kinds.Snippet,
+    kinds.Color,
+    kinds.File,
+    kinds.Reference,
+    kinds.Folder,
+    kinds.EnumMember,
+    kinds.Constant,
+    kinds.Struct,
+    kinds.Event,
+    kinds.Operator,
+    kinds.TypeParameter,
+  ];
+  const word = model.getWordUntilPosition(position);
+  const wordRange = new monaco.Range(
+    position.lineNumber,
+    word.startColumn,
+    position.lineNumber,
+    word.endColumn,
+  );
+  return items.slice(0, 500).map((item) => {
+    const edit = item.textEdit;
+    const replacement = edit?.range
+      ? range(monaco, edit.range)
+      : edit?.insert && edit.replace
+        ? { insert: range(monaco, edit.insert), replace: range(monaco, edit.replace) }
+        : wordRange;
+    return {
+      label: item.label,
+      kind: byLspKind[(item.kind ?? 1) - 1] ?? kinds.Text,
+      detail: item.detail,
+      documentation: markdown(item.documentation),
+      insertText: edit?.newText ?? item.insertText ?? item.label,
+      insertTextRules:
+        item.insertTextFormat === 2
+          ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+          : undefined,
+      filterText: item.filterText,
+      sortText: item.sortText,
+      range: replacement,
+      additionalTextEdits: item.additionalTextEdits?.flatMap((extra) =>
+        extra.range ? [{ range: range(monaco, extra.range), text: extra.newText }] : [],
+      ),
+    };
+  });
+}
+
 function localItems(
   monaco: Monaco,
   candidates: Candidate[],
@@ -137,6 +269,42 @@ function mergeItems(primary: languages.CompletionItem[], fallback: languages.Com
 export function registerEditorIntellisense(monaco: Monaco) {
   if (installed.has(monaco)) return;
   installed.add(monaco);
+  const dependencies = new Map<string, { name: string; content: string }>();
+
+  monaco.editor.registerEditorOpener({
+    openCodeEditor(source, resource, selection) {
+      const position =
+        selection &&
+        ('startLineNumber' in selection
+          ? { lineNumber: selection.startLineNumber, column: selection.startColumn }
+          : { lineNumber: selection.lineNumber, column: selection.column });
+      if (resource.scheme === 'velxio-workspace') {
+        const [, groupId, fileId] = resource.path.split('/');
+        const model = source.getModel();
+        // Monaco is still completing its navigation action. Let it finish
+        // before switching tabs and disposing the initiating editor.
+        setTimeout(() => {
+          if (model && bindings.has(model)) {
+            revealWorkspaceFile(groupId, fileId, position ?? { lineNumber: 1, column: 1 });
+          }
+        }, 0);
+        return true;
+      }
+      const dependency = dependencies.get(resource.toString());
+      if (!dependency) return false;
+      window.dispatchEvent(
+        new CustomEvent<DependencyPreview>(OPEN_DEPENDENCY, {
+          detail: {
+            ...dependency,
+            lineNumber: position?.lineNumber ?? 1,
+            column: position?.column ?? 1,
+          },
+        }),
+      );
+      return true;
+    },
+  });
+
   monaco.languages.registerCompletionItemProvider('yaml', {
     triggerCharacters: [':', ' ', '*'],
     provideCompletionItems: trackCompletion(async (model, position, trigger, token) => {
@@ -197,9 +365,28 @@ export function registerEditorIntellisense(monaco: Monaco) {
           position.lineNumber,
           position.column,
         );
-        const remote = async (): Promise<languages.CompletionList> => ({
-          suggestions: arduino ? await arduinoCompletions(monaco, model, position, board, headers, token) : [],
-        });
+        const remote = async (): Promise<languages.CompletionList> => {
+          const result =
+            header !== undefined && arduino
+              ? null
+              : await binding.session?.request<
+                  Completion[] | { items: Completion[] | null; isIncomplete?: boolean }
+                >('completion', file.name, position, token, {
+                  triggerKind: trigger.triggerKind + 1,
+                  triggerCharacter: trigger.triggerCharacter,
+                });
+          const items = Array.isArray(result) ? result : result?.items;
+          if (!ctx.fresh()) return { suggestions: [] };
+          const semantic = items ? completionItems(monaco, model, position, items) : [];
+          const indexed =
+            arduino && (!semantic.length || /(?:\.|->|::)\s*\w*$/.test(prefix))
+              ? await arduinoCompletions(monaco, model, position, board, headers, token)
+              : [];
+          return {
+            suggestions: mergeItems(semantic, indexed),
+            incomplete: !Array.isArray(result) && result?.isIncomplete,
+          };
+        };
         const pending = remote();
         const { codeCandidates, standardHeaders } = await import('./codeCompletions');
         if (!ctx.fresh()) return;
@@ -262,10 +449,82 @@ export function registerEditorIntellisense(monaco: Monaco) {
       async provideHover(model, position, token) {
         const ctx = snapshot(model, token);
         if (!ctx || hasIntellisenseImpl()) return;
-        const { board } = ctx;
+        const { file, board, binding } = ctx;
+        const result = await binding.session?.request<{
+          contents: Documentation | Documentation[];
+          range?: LspRange;
+        }>('hover', file.name, position, token);
+        if (!ctx.fresh()) return;
+        if (result) {
+          const values = Array.isArray(result.contents) ? result.contents : [result.contents];
+          return {
+            contents: values.flatMap((value) => markdown(value) ?? []),
+            range: result.range ? range(monaco, result.range) : undefined,
+          };
+        }
         if (!board || !supportsArduinoSymbols(board) || language === 'python') return;
         const hover = await arduinoHover(monaco, model, position, board, token);
         if (ctx.fresh() && !hasIntellisenseImpl()) return hover;
+      },
+    });
+    monaco.languages.registerSignatureHelpProvider(language, {
+      signatureHelpTriggerCharacters: ['(', ','],
+      signatureHelpRetriggerCharacters: [','],
+      async provideSignatureHelp(model, position, token) {
+        const ctx = snapshot(model, token);
+        if (!ctx?.binding.session || hasIntellisenseImpl()) return;
+        const result = await ctx.binding.session.request<{
+          signatures: Signature[];
+          activeSignature?: number;
+          activeParameter?: number;
+        }>('signatureHelp', ctx.file.name, position, token);
+        if (!result?.signatures.length || !ctx.fresh()) return;
+        return {
+          value: {
+            signatures: result.signatures.map((signature) => ({
+              label: signature.label,
+              documentation: markdown(signature.documentation),
+              parameters: (signature.parameters ?? []).map((parameter) => ({
+                label: parameter.label,
+                documentation: markdown(parameter.documentation),
+              })),
+            })),
+            activeSignature: result.activeSignature ?? 0,
+            activeParameter: result.activeParameter ?? 0,
+          },
+          dispose() {},
+        };
+      },
+    });
+    monaco.languages.registerDefinitionProvider(language, {
+      async provideDefinition(model, position, token) {
+        const ctx = snapshot(model, token);
+        if (!ctx?.binding.session || hasIntellisenseImpl()) return;
+        const result = await ctx.binding.session.request<Definition[]>(
+          'definition',
+          ctx.file.name,
+          position,
+          token,
+        );
+        if (!result || !ctx.fresh()) return;
+        return result.flatMap((definition) => {
+          const target = { range: range(monaco, definition.range) };
+          if (definition.dependency) {
+            const uri = monaco.Uri.parse(
+              `velxio-dependency:/${definition.dependency.id}/${encodeURIComponent(definition.name)}`,
+            );
+            dependencies.set(uri.toString(), {
+              name: definition.name,
+              content: definition.dependency.content,
+            });
+            if (dependencies.size > 24) dependencies.delete(dependencies.keys().next().value!);
+            return [{ ...target, uri }];
+          }
+          const file = ctx.files.find(({ name }) => name === definition.name);
+          return file
+            ? [{ ...target, uri: monaco.Uri.parse(workspaceModelPath(ctx.binding.groupId, file)) }]
+            : [];
+        });
       },
     });
   }

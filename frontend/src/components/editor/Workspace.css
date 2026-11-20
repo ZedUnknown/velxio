@@ -910,6 +910,46 @@ button.workspace-status-board:hover,
   cursor: pointer;
 }
 
+.editor-dependency-preview {
+  position: fixed;
+  inset: 0;
+  width: min(820px, calc(100% - 24px));
+  height: min(560px, 80dvh);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--wb-7);
+  border-radius: 8px;
+  background: var(--wb-3);
+  color: var(--wb-13);
+}
+
+.editor-dependency-preview[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.editor-dependency-preview::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.editor-dependency-preview header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--wb-6);
+}
+
+.editor-dependency-preview button {
+  padding: 4px 8px;
+  border: 1px solid var(--wb-7);
+  border-radius: 4px;
+  background: var(--wb-2);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
 .workspace-search-result,
 .local-projects-list button {
   display: flex;
