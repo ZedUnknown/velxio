@@ -503,7 +503,10 @@
       "replace": "Substituir",
       "account": "Conta",
       "mainMenu": "Menu",
-      "importFromDisk": "Importar do disco…"
+      "openLocal": "Abrir projeto local…",
+      "openDisk": "Abrir .vlx do disco…",
+      "importFromDisk": "Importar do disco…",
+      "saveAs": "Salvar como…"
     },
     "inspector": {
       "propertiesTab": "Propriedades",
@@ -675,6 +678,48 @@
       "priority": "Compilação prioritária",
       "showOutput": "Mostrar saída",
       "hide": "Ocultar (a compilação continua)"
+    },
+    "newProject": {
+      "title": "Criar um novo projeto",
+      "subtitle": "Escolha um espaço vazio ou uma placa com o exemplo Blink. O espaço de trabalho atual será substituído.",
+      "blankTitle": "Projeto em branco",
+      "blankDesc": "Espaço vazio para adicionar suas placas e componentes"
+    },
+    "localProjects": {
+      "unsavedStatus": "Alterações não salvas",
+      "openList": "Projetos salvos · {{name}}",
+      "opening": "Abrindo projeto salvo…",
+      "startTitle": "Iniciar um projeto",
+      "new": "Novo projeto",
+      "title": "Projetos salvos",
+      "loadError": "Não foi possível ler os projetos salvos neste navegador.",
+      "deleteError": "Não foi possível excluir esta cópia local.",
+      "saveError": "Não foi possível salvar este projeto.",
+      "saveCopy": "Salvar uma cópia local",
+      "saveTitle": "Salvar projeto",
+      "projectName": "Nome do projeto",
+      "back": "Voltar",
+      "newDescription": "Comece em branco ou escolha um modelo de placa.",
+      "savedDescription": "Abra um projeto salvo neste navegador.",
+      "loading": "Carregando projetos locais…",
+      "empty": "Ainda não há projetos salvos neste navegador.",
+      "search": "Buscar projetos",
+      "noMatches": "Nenhum projeto corresponde à busca.",
+      "lastSaved": "Último salvamento",
+      "created": "Criado",
+      "renameProject": "Renomear {{name}}",
+      "rename": "Renomear",
+      "deleteProject": "Excluir {{name}}",
+      "deleteCopy": "Excluir",
+      "renameTitle": "Renomear cópia local",
+      "openTitle": "Abrir projeto salvo",
+      "unsaved": "Este espaço de trabalho tem alterações não salvas.",
+      "confirmDelete": "Excluir a cópia local de “{{name}}” e seu histórico de arquivos?",
+      "deleteOpenCopy": "O espaço aberto permanecerá no editor como rascunho não salvo.",
+      "discard": "Descartar alterações e abrir",
+      "untitled": "Projeto sem título",
+      "creating": "Criando projeto…",
+      "discardAndCreate": "Descartar alterações e criar"
     }
   },
   "about": {

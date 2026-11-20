@@ -15,7 +15,7 @@ import { boardDisplayName, isKnownBoardKind, isPiBoardKind } from '../../types/b
 import { importProjectFile, PROJECT_FILE_ACCEPT } from '../../utils/importProject';
 import { retargetBoardWires } from '../../utils/wokwiZip';
 import { showMessageDialog, showConfirmDialog } from '../../store/useMessageDialogStore';
-import { registerEditorCommand } from '../../lib/editorCommands';
+import { registerEditorCommand, runEditorCommand } from '../../lib/editorCommands';
 import './FileExplorer.css';
 
 const CHIP_IMAGE_MAX_BYTES = 256 * 1024;
@@ -1044,6 +1044,9 @@ export const FileExplorer: React.FC<FileExplorerProps> = ({ onShowExplorer }) =>
               menu?.removeAttribute('open');
               menu?.querySelector('summary')?.focus();
             }}>
+            <button type="button" onClick={() => runEditorCommand('project.openLocal')}>
+              {t('editor.menu.openLocal', 'Open local project…')}
+            </button>
             <button type="button" onClick={revealActiveFile} disabled={!activeFile}>
               {t('editor.fileExplorer.revealActive', 'Reveal active file')}
             </button>

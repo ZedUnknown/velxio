@@ -503,7 +503,10 @@
       "replace": "Sostituisci",
       "account": "Account",
       "mainMenu": "Menu",
-      "importFromDisk": "Importa dal disco…"
+      "openLocal": "Apri progetto locale…",
+      "openDisk": "Apri file .vlx dal disco…",
+      "importFromDisk": "Importa dal disco…",
+      "saveAs": "Salva con nome…"
     },
     "inspector": {
       "propertiesTab": "Proprietà",
@@ -675,6 +678,48 @@
       "priority": "Compilazione prioritaria",
       "showOutput": "Mostra output",
       "hide": "Nascondi (la compilazione continua)"
+    },
+    "newProject": {
+      "title": "Crea un nuovo progetto",
+      "subtitle": "Scegli un’area vuota o una scheda con l’esempio Blink. L’area di lavoro attuale verrà sostituita.",
+      "blankTitle": "Progetto vuoto",
+      "blankDesc": "Area vuota in cui aggiungere schede e componenti"
+    },
+    "localProjects": {
+      "unsavedStatus": "Modifiche non salvate",
+      "openList": "Progetti salvati · {{name}}",
+      "opening": "Apertura del progetto salvato…",
+      "startTitle": "Inizia un progetto",
+      "new": "Nuovo progetto",
+      "title": "Progetti salvati",
+      "loadError": "Impossibile leggere i progetti salvati in questo browser.",
+      "deleteError": "Impossibile eliminare questa copia locale.",
+      "saveError": "Impossibile salvare il progetto.",
+      "saveCopy": "Salva una copia locale",
+      "saveTitle": "Salva progetto",
+      "projectName": "Nome del progetto",
+      "back": "Indietro",
+      "newDescription": "Inizia da zero o scegli un modello di scheda.",
+      "savedDescription": "Apri un progetto salvato in questo browser.",
+      "loading": "Caricamento dei progetti locali…",
+      "empty": "Nessun progetto è ancora salvato in questo browser.",
+      "search": "Cerca progetti",
+      "noMatches": "Nessun progetto corrisponde alla ricerca.",
+      "lastSaved": "Ultimo salvataggio",
+      "created": "Creato",
+      "renameProject": "Rinomina {{name}}",
+      "rename": "Rinomina",
+      "deleteProject": "Elimina {{name}}",
+      "deleteCopy": "Elimina",
+      "renameTitle": "Rinomina copia locale",
+      "openTitle": "Apri progetto salvato",
+      "unsaved": "Questa area di lavoro contiene modifiche non salvate.",
+      "confirmDelete": "Eliminare la copia locale di «{{name}}» e la cronologia dei file?",
+      "deleteOpenCopy": "L’area aperta resterà nell’editor come bozza non salvata.",
+      "discard": "Ignora le modifiche e apri",
+      "untitled": "Progetto senza titolo",
+      "creating": "Creazione del progetto…",
+      "discardAndCreate": "Ignora le modifiche e crea"
     }
   },
   "about": {

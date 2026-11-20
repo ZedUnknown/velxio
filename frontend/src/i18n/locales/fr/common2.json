@@ -503,7 +503,10 @@
       "replace": "Remplacer",
       "account": "Compte",
       "mainMenu": "Menu",
-      "importFromDisk": "Importer depuis le disque…"
+      "openLocal": "Ouvrir un projet local…",
+      "openDisk": "Ouvrir un fichier .vlx…",
+      "importFromDisk": "Importer depuis le disque…",
+      "saveAs": "Enregistrer sous…"
     },
     "inspector": {
       "propertiesTab": "Propriétés",
@@ -675,6 +678,48 @@
       "priority": "Compilation prioritaire",
       "showOutput": "Afficher la sortie",
       "hide": "Masquer (la compilation continue)"
+    },
+    "newProject": {
+      "title": "Créer un projet",
+      "subtitle": "Choisissez un espace vide ou une carte avec l’exemple Blink. L’espace de travail actuel sera remplacé.",
+      "blankTitle": "Projet vierge",
+      "blankDesc": "Espace vide pour ajouter vos cartes et composants"
+    },
+    "localProjects": {
+      "unsavedStatus": "Modifications non enregistrées",
+      "openList": "Projets enregistrés · {{name}}",
+      "opening": "Ouverture du projet enregistré…",
+      "startTitle": "Démarrer un projet",
+      "new": "Nouveau projet",
+      "title": "Projets enregistrés",
+      "loadError": "Impossible de lire les projets enregistrés dans ce navigateur.",
+      "deleteError": "Impossible de supprimer cette copie locale.",
+      "saveError": "Impossible d’enregistrer ce projet.",
+      "saveCopy": "Enregistrer une copie locale",
+      "saveTitle": "Enregistrer le projet",
+      "projectName": "Nom du projet",
+      "back": "Retour",
+      "newDescription": "Partez de zéro ou choisissez un modèle de carte.",
+      "savedDescription": "Ouvrez un projet enregistré dans ce navigateur.",
+      "loading": "Chargement des projets locaux…",
+      "empty": "Aucun projet n’est encore enregistré dans ce navigateur.",
+      "search": "Rechercher des projets",
+      "noMatches": "Aucun projet ne correspond à la recherche.",
+      "lastSaved": "Dernier enregistrement",
+      "created": "Créé",
+      "renameProject": "Renommer {{name}}",
+      "rename": "Renommer",
+      "deleteProject": "Supprimer {{name}}",
+      "deleteCopy": "Supprimer",
+      "renameTitle": "Renommer la copie locale",
+      "openTitle": "Ouvrir un projet enregistré",
+      "unsaved": "Cet espace de travail comporte des modifications non enregistrées.",
+      "confirmDelete": "Supprimer la copie locale de « {{name}} » et son historique de fichiers ?",
+      "deleteOpenCopy": "L’espace ouvert restera dans l’éditeur en tant que brouillon non enregistré.",
+      "discard": "Ignorer les modifications et ouvrir",
+      "untitled": "Projet sans titre",
+      "creating": "Création du projet…",
+      "discardAndCreate": "Ignorer les modifications et créer"
     }
   },
   "about": {

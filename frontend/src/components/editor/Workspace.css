@@ -390,9 +390,105 @@
   flex-shrink: 0;
 }
 
+.workspace-status-project {
+  max-inline-size: min(18vw, 160px);
+  min-inline-size: 0;
+}
+
+span.workspace-status-project {
+  cursor: default;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace-status-unsaved {
+  color: var(--color-feedback-warning);
+  animation: workspace-unsaved-breathe 2s ease-in-out infinite;
+}
+
 @keyframes workspace-unsaved-breathe {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-status-unsaved {
+    animation: none;
+  }
+}
+
+.workspace-project-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  display: grid;
+  place-items: center;
+  background: var(--wb-2);
+  color: var(--wb-12);
+  font-size: 14px;
+}
+
+.workspace-project-start {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.workspace-project-start section {
+  max-inline-size: 100%;
+  padding: 16px;
+  border: 1px solid var(--wb-7);
+  border-radius: 8px;
+  background: var(--wb-2);
+  color: var(--wb-13);
+  box-shadow: var(--shadow-2);
+  pointer-events: auto;
+}
+
+.workspace-project-start h2 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.workspace-project-start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.workspace-project-start-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 4px 9px;
+  border: 1px solid var(--wb-7);
+  border-radius: 5px;
+  background: var(--wb-3);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.workspace-project-start-actions button:hover {
+  background: var(--wb-5);
+}
+
+.workspace-project-start-actions .workspace-project-start-new {
+  border-color: transparent;
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-fg);
+}
+
+.workspace-project-start-actions .workspace-project-start-new:hover {
+  background: var(--color-action-primary-hover);
 }
 
 .workspace-component-count {
@@ -675,6 +771,12 @@ button.workspace-status-board:hover,
   background: var(--wb-3);
 }
 
+.local-projects-dialog h2 {
+  margin: 0;
+  color: var(--wb-13);
+  font-size: 13px;
+}
+
 .workspace-sidebar-view p,
 .workspace-sidebar-view ul {
   margin: 0;
@@ -695,6 +797,28 @@ button.workspace-status-board:hover,
   /* The list already has 2px of vertical padding. */
   margin-block: 6px 7px;
   margin-inline: 9px;
+}
+
+.workspace-sidebar-view > button,
+.local-projects-dialog input,
+.local-projects-dialog button {
+  min-width: 0;
+  padding: 4px 6px;
+  border: 1px solid var(--wb-7);
+  border-radius: 4px;
+  background: var(--wb-2);
+  color: var(--wb-13);
+  font: inherit;
+}
+
+.workspace-sidebar-view > button,
+.local-projects-dialog button {
+  cursor: pointer;
+}
+
+.workspace-sidebar-view > button:hover,
+.local-projects-dialog button:hover:enabled {
+  background: var(--wb-5);
 }
 
 .workspace-search-modes {
@@ -779,6 +903,27 @@ button.workspace-status-board:hover,
   color: var(--wb-10);
 }
 
+.local-projects-dialog {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(560px, calc(100% - 24px));
+  height: fit-content;
+  margin: auto;
+  max-height: 85dvh;
+  padding: 20px;
+  border: 1px solid var(--wb-7);
+  border-radius: 8px;
+  box-shadow: var(--shadow-3);
+  color: var(--wb-12);
+  background: var(--wb-2);
+  font-size: 13px;
+}
+
+.local-projects-dialog::backdrop {
+  background: var(--color-bg-overlay);
+}
+
 .editor-quick-pick {
   position: fixed;
   inset: calc(var(--workspace-toolbar-height) + 8px) 0 auto;
@@ -847,6 +992,271 @@ button.workspace-status-board:hover,
 
 .editor-quick-pick-options button span {
   color: var(--wb-10);
+}
+
+.local-projects-heading,
+.local-projects-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.local-projects-heading h2 {
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.local-projects-dialog :is(button, input) {
+  min-height: 32px;
+  padding-inline: 9px;
+  border-radius: 5px;
+}
+
+.local-projects-dialog button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.local-projects-start,
+.local-projects-list,
+.local-projects-form {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.local-projects-start {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-block-start: 16px;
+}
+
+.local-projects-dialog .local-projects-start button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 11px;
+  min-height: 118px;
+  padding: 13px;
+  border-radius: 8px;
+  background: var(--wb-3);
+  text-align: start;
+}
+
+.local-projects-dialog .local-projects-start button:hover:enabled {
+  border-color: var(--color-accent-border);
+  background: var(--wb-4);
+}
+
+.local-projects-dialog .local-projects-start .local-projects-start-disk {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: center;
+  min-height: 66px;
+}
+
+.local-projects-start button .local-projects-start-icon {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 7px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-fg);
+}
+
+.local-projects-start .local-projects-start-new .local-projects-start-icon {
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-fg);
+}
+
+.local-projects-start button span {
+  display: grid;
+  gap: 2px;
+}
+
+.local-projects-start button small,
+.local-projects-metadata {
+  color: var(--wb-11);
+  font-size: 12px;
+}
+
+.local-projects-search {
+  margin-top: 12px;
+}
+
+.local-projects-list {
+  max-height: min(40dvh, 300px);
+  overflow: auto;
+  padding: 0;
+  list-style: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-scrollbar-thumb) transparent;
+}
+
+.local-projects-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px;
+  padding-inline-end: 6px;
+  border: 1px solid var(--wb-7);
+  border-radius: 7px;
+  background: var(--wb-3);
+}
+
+.local-projects-list li:has(.local-projects-item[aria-current='true']) {
+  border-color: var(--color-accent-border);
+}
+
+.local-projects-dialog .local-projects-item {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 0;
+  background: transparent;
+  text-align: start;
+}
+
+.local-projects-item strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.local-projects-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+}
+
+.local-projects-list :focus-visible {
+  outline-offset: -2px;
+}
+
+.local-projects-heading button {
+  display: grid;
+  place-items: center;
+}
+
+.local-projects-list :is(.local-projects-rename, .local-projects-delete) {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  inline-size: 32px;
+  block-size: 32px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--wb-11);
+}
+
+.local-projects-list .local-projects-rename:hover:enabled {
+  color: var(--wb-13);
+}
+
+.local-projects-list .local-projects-delete:hover:enabled,
+.local-projects-action-dialog :is(.local-projects-delete, .local-projects-discard) {
+  border-color: var(--color-feedback-error-border);
+  color: var(--color-feedback-error);
+}
+
+.local-projects-action-dialog {
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 28px));
+  margin: auto;
+  padding: 18px;
+  border: 1px solid var(--wb-7);
+  border-radius: 10px;
+  background: var(--wb-3);
+  color: var(--wb-13);
+  box-shadow: var(--shadow-3);
+}
+
+.local-projects-action-dialog::backdrop {
+  background: rgb(0 0 0 / 50%);
+}
+
+.local-projects-action-dialog h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.local-projects-action-dialog p {
+  margin: 10px 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+
+.local-projects-rename-form {
+  display: grid;
+  gap: 8px;
+  margin-block-start: 12px;
+}
+
+.local-projects-dialog :is(.local-projects-form, .local-projects-rename-form) input:focus {
+  outline: none;
+  border-color: var(--color-action-primary);
+}
+
+.local-projects-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.local-projects-form label {
+  grid-column: 1 / -1;
+}
+
+.local-projects-dialog .local-projects-primary {
+  background: var(--color-action-primary);
+  color: var(--color-action-primary-fg);
+  border-color: transparent;
+}
+
+.local-projects-dialog .local-projects-primary:hover:enabled {
+  background: var(--color-action-primary-hover);
+}
+
+.local-projects-error {
+  color: var(--color-feedback-error);
+}
+
+.local-projects-footer {
+  justify-content: flex-end;
+  padding-top: 11px;
+  border-top: 1px solid var(--wb-6);
+}
+
+@media (max-width: 430px) {
+  .local-projects-dialog {
+    padding: 14px;
+  }
+
+  .local-projects-start {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .local-projects-dialog .local-projects-start button {
+    flex-direction: row;
+    align-items: center;
+    min-height: 66px;
+  }
+
+  .local-projects-start-icon {
+    flex: 0 0 35px;
+  }
+
+  .local-projects-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .local-projects-form input {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 768px) {

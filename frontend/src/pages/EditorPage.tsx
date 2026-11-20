@@ -3,7 +3,7 @@
  */
 
 import React, { useRef, useState, useCallback, useEffect, useLayoutEffect } from 'react';
-import { ChevronDown, CircuitBoard, CodeXml, Package, PanelsLeftRight } from 'lucide-react';
+import { ChevronDown, CircuitBoard, CodeXml, FolderOpen, HardDrive, Package, PanelsLeftRight, Plus, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { startSimulation } from '../simulation/spice/start';
 import { useSEO } from '../utils/useSEO';
@@ -12,12 +12,9 @@ import { EditorToolbar } from '../components/editor/EditorToolbar';
 import { FileExplorer } from '../components/editor/FileExplorer';
 import { EditorSettings } from '../components/editor/EditorSettings';
 import { EditorQuickPick } from '../components/editor/EditorQuickPick';
-import { NewProjectDialog } from '../components/editor/NewProjectDialog';
-import { getLocaleFromPath, localizedPath } from '../i18n/path';
-import { restoreStashedWorkspace } from '../utils/workspaceDraft';
-import { whenNewsClear } from '../lib/newsGate';
+import { LocalProjectsDialog } from '../components/editor/LocalProjectsDialog';
 import {
-  WorkspaceActivityBar, WorkspaceToolButton, WorkspaceSearch,
+  WorkspaceActivityBar, WorkspaceSearch, WorkspaceToolButton,
   type WorkspaceTool, type WorkspaceView,
 } from '../components/editor/WorkspaceSidebar';
 
@@ -29,6 +26,14 @@ import { SerialMonitor } from '../components/simulator/SerialMonitor';
 import { Oscilloscope } from '../components/simulator/Oscilloscope';
 import { AppHeader } from '../components/layout/AppHeader';
 import { triggerSaveAction } from '../lib/proSaveAction';
+import {
+  canOpenProjectFile,
+  canSaveProjectFile,
+  openProjectFile,
+  saveProjectFileAs,
+  useLocalWorkspace,
+  watchLocalWorkspace,
+} from '../lib/localWorkspace';
 import { useEditorPreferences } from '../store/useEditorPreferences';
 import { GitHubStarBanner } from '../components/layout/GitHubStarBanner';
 import { NewsAnnouncer } from '../components/layout/NewsAnnouncer';
@@ -41,6 +46,7 @@ import { boardDisplayName } from '../types/board';
 import { trackToggleSerialMonitor } from '../utils/analytics';
 import { clearWorkspaceForStarter } from '../components/editor/NewProjectDialog';
 import { useAutoSaveProject } from '../hooks/useAutoSaveProject';
+import { useEditorProjectRoute } from '../hooks/useEditorProjectRoute';
 import { registerEditorCommand, runEditorCommand } from '../lib/editorCommands';
 import { EditorMenuBar } from '../components/editor/EditorMenuBar';
 import '../App.css';
@@ -67,7 +73,7 @@ const DESKTOP_VIEWS = [
   { mode: 'circuit', Icon: CircuitBoard },
 ] as const;
 
-let starterDialogShownThisLoad = false;
+type ProjectDialog = 'start' | 'templates' | 'saved' | 'saved-from-start' | 'save' | 'save-copy';
 type BottomPanel = 'console' | 'serial' | 'scope';
 
 function announceStarBanner(action: 'shown' | 'click' | 'dismiss', round: 1 | 2): void {
@@ -89,12 +95,46 @@ export const EditorPage: React.FC = () => {
   const [draggedExplorerWidth, setDraggedExplorerWidth] = useState<number | null>(null);
   const explorerWidth = draggedExplorerWidth ?? savedExplorerWidth;
   const updatePreferences = useEditorPreferences((state) => state.update);
-  const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
+  const [projectDialog, setProjectDialog] = useState<ProjectDialog | null>(null);
+  const [startupWorkspaceVersion, setStartupWorkspaceVersion] = useState<number | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const codeEditorRef = useRef<CodeEditorHandle>(null);
   const [showBoardPicker, setShowBoardPicker] = useState(false);
   const toggleBoardPicker = useCallback(() => setShowBoardPicker((open) => !open), []);
   const [statusBarHost, setStatusBarHost] = useState<HTMLDivElement | null>(null);
+  const localProjectName = useLocalWorkspace((state) => state.name);
+  const isBrowserProject = useLocalWorkspace((state) => state.browserId !== null);
+  const localSaveStatus = useLocalWorkspace((state) => state.status);
+  const hasLocalProject = localProjectName !== null;
+  const hasCloudProject = useProjectStore((state) => state.currentProject !== null);
+  const statusFile = useEditorStore((state) => state.manifestViewBoardId
+    ? undefined
+    : state.files.find(({ id }) => id === state.activeFileId));
+  const workspaceVersion = useProjectStore((state) => state.workspaceVersion);
+  const emptyCircuit = useSimulatorStore(
+    (state) => !state.boards.length && !state.components.length && !state.wires.length,
+  );
+  const emptyFiles = useEditorStore(
+    (state) => !Object.values(state.fileGroups).some((files) => files.length) &&
+      !Object.values(state.folderGroups).some((folders) => folders.length),
+  );
+  const closeProjectDialog = useCallback(() => setProjectDialog(null), []);
+  const dismissProjectStart = () => {
+    setStartupWorkspaceVersion(null);
+    closeProjectDialog();
+  };
+  const showProjectStart = useCallback(() => setProjectDialog('start'), []);
+  const showStartup = useCallback(() => {
+    setStartupWorkspaceVersion(useProjectStore.getState().workspaceVersion);
+    setProjectDialog((dialog) => dialog ?? 'start');
+  }, []);
+  useLayoutEffect(() => watchLocalWorkspace(), []);
+  const projectRoute = useEditorProjectRoute({
+    clearWorkspace: clearWorkspaceForStarter,
+    showStartup,
+    closeProjectDialog,
+  });
+
   const [editorWidthPct, setEditorWidthPct] = useState(45);
   // Desktop-only 3-way layout switch (code-only / circuit-only / both).
   // Lets users hide a pane to give the right-docked chat more room.
@@ -143,52 +183,6 @@ export const EditorPage: React.FC = () => {
   useEffect(() => {
     return startSimulation();
   }, []);
-
-  useEffect(() => {
-    restoreStashedWorkspace();
-  }, []);
-
-  // Pristine-visit starter dialog: a bare /editor landing still holds the
-  // hardcoded Uno + LED starter (see useSimulatorStore INITIAL_BOARD /
-  // builtin components). Clear it and offer the template picker over an
-  // EMPTY canvas instead of silently dropping the user into the Arduino
-  // blink (cancelling the dialog leaves a blank workspace). Guarded so it
-  // never fires over a loaded project/example URL, a restored login draft
-  // (both leave the stores non-pristine), or twice per page load. Declared
-  // AFTER the restoreStashedWorkspace effect — mount order is what makes
-  // the pristine check see the restored draft.
-  //
-  // Sequenced BEHIND the news announcement: the canvas is cleared right
-  // away, but the dialog itself waits until NewsAnnouncer reports the
-  // announcement flow is done (nothing to show, or its modal was closed).
-  // The 2.5s bound applies only while the news decision is pending, so a
-  // dead feed can't hold the dialog hostage — see lib/newsGate.ts.
-  useEffect(() => {
-    if (starterDialogShownThisLoad) return;
-    const locale = getLocaleFromPath(window.location.pathname);
-    // /editor is prerendered, so a fresh load arrives as /editor/ (nginx
-    // adds the slash); client-side navigation lands on /editor. Both count.
-    if (window.location.pathname.replace(/\/+$/, '') !== localizedPath('/editor', locale)) return;
-    if (window.location.search) return;
-    if (useProjectStore.getState().currentProject) return;
-    const sim = useSimulatorStore.getState();
-    const pristine =
-      sim.boards.length === 1 &&
-      sim.boards[0].id === 'arduino-uno' &&
-      sim.components.length === 2 &&
-      sim.components.every((c) => c.id === 'led_builtin' || c.id === 'r_builtin');
-    if (!pristine) return;
-    starterDialogShownThisLoad = true;
-    clearWorkspaceForStarter();
-    let cancelled = false;
-    void whenNewsClear(2500).then(() => {
-      if (!cancelled) setShowNewProjectDialog(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
 
   // ── GitHub star prompt (show twice at most, after 10 min in the editor) ────
   // Three localStorage flags drive this:
@@ -336,16 +330,8 @@ export const EditorPage: React.FC = () => {
   }, [isMobile, viewMode, t]);
 
   const handleSaveClick = useCallback(() => {
-    triggerSaveAction();
-  }, []);
-
-  // "New workspace" opens the starter-template dialog. Destruction moved
-  // from here into the dialog's selection handler — Cancel/ESC now leaves
-  // the current workspace untouched, so the old confirm dialog is gone.
-  const handleNewClick = useCallback(() => {
-    setShowNewProjectDialog(true);
-  }, []);
-
+    if (!projectRoute.openingProject) triggerSaveAction(() => setProjectDialog('save'));
+  }, [projectRoute.openingProject]);
 
   const openWorkspaceView = useCallback((view: WorkspaceView) => {
     updatePreferences({ sidebarView: view });
@@ -438,7 +424,7 @@ export const EditorPage: React.FC = () => {
   // menu) so the menu never duplicates the confirm-dialog / autosave logic.
   useEffect(() => {
     const offSave = registerEditorCommand('project.save', handleSaveClick);
-    const offNew = registerEditorCommand('project.new', handleNewClick);
+    const offNew = registerEditorCommand('project.new', showProjectStart);
     const offExplorer = registerEditorCommand('view.toggleExplorer', () => {
       const state = useEditorStore.getState();
       const codeVisible = isMobile ? mobileView === 'code' : state.viewMode !== 'circuit';
@@ -446,13 +432,23 @@ export const EditorPage: React.FC = () => {
       else openWorkspaceView('explorer');
     });
     const offSettings = registerEditorCommand('view.settings', () => setShowSettings(true));
+    const offLocal = registerEditorCommand('project.openLocal', () => setProjectDialog('saved'));
+    const offDisk = canOpenProjectFile()
+      ? registerEditorCommand('project.openDisk', () => void openProjectFile())
+      : undefined;
+    const offSaveAs = canSaveProjectFile()
+      ? registerEditorCommand('project.saveAs', () => void saveProjectFileAs())
+      : undefined;
     return () => {
       offSave();
       offNew();
       offExplorer();
       offSettings();
+      offLocal();
+      offDisk?.();
+      offSaveAs?.();
     };
-  }, [handleSaveClick, handleNewClick, isMobile, mobileView, openWorkspaceView, setExplorerOpen, sidebarView]);
+  }, [handleSaveClick, showProjectStart, isMobile, mobileView, openWorkspaceView, setExplorerOpen, sidebarView]);
 
   // Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z — canvas undo/redo. Skipped when the
   // user is typing in any input/textarea/contenteditable so the Monaco
@@ -667,9 +663,41 @@ export const EditorPage: React.FC = () => {
         </div>
   ) : undefined;
 
+  const openingProject = projectRoute.openingProject && !projectDialog;
+  const awaitingStarterProject = !hasLocalProject && workspaceVersion === startupWorkspaceVersion && emptyCircuit && emptyFiles;
+  const showEmptyProjectActions = !projectDialog && !openingProject && awaitingStarterProject;
+  const unsavedLocal = !hasCloudProject && (
+    statusFile?.modified || localSaveStatus === 'dirty' || localSaveStatus === 'error'
+  );
+  const statusName = localProjectName ?? (unsavedLocal ? statusFile?.name : undefined);
+  const unsavedLabel = t('editor.localProjects.unsavedStatus', 'Unsaved changes');
+  const statusTitle = unsavedLocal ? `${unsavedLabel} · ${statusName}` : statusName;
+  const statusContent = (
+    <>
+      {unsavedLocal && <TriangleAlert size={13} className="workspace-status-unsaved" aria-label={unsavedLabel} role="img" />}
+      <span>{statusName}</span>
+    </>
+  );
+  const projectStatus = statusName && (isBrowserProject ? (
+    <button type="button" className="workspace-status-board workspace-status-project"
+      title={statusTitle}
+      aria-label={t('editor.localProjects.openList', 'Saved projects · {{name}}', { name: statusTitle })}
+      onClick={() => setProjectDialog('saved')}>
+      {statusContent}
+    </button>
+  ) : (
+    <span className="workspace-status-board workspace-status-project" title={statusTitle}>
+      {statusContent}
+    </span>
+  ));
   return (
     <>
-    <div className="app editor-workspace"
+    {openingProject && (
+      <div className="workspace-project-loading" role="status">
+        {t('editor.localProjects.opening', 'Opening saved project…')}
+      </div>
+    )}
+    <div className="app editor-workspace" inert={openingProject}
       style={{ '--workspace-activity-width': `${ACTIVITY_BAR_WIDTH}px` } as React.CSSProperties}>
       <AppHeader
         editorMenu={<EditorMenuBar mobileView={isMobile ? mobileView : undefined} onSetMobileView={setMobileView} />}
@@ -926,6 +954,32 @@ export const EditorPage: React.FC = () => {
             </>
           )}
         </div>
+        {showEmptyProjectActions && (
+          <div className="workspace-project-start">
+            <section aria-labelledby="workspace-project-start-title">
+              <h2 id="workspace-project-start-title">
+                {t('editor.localProjects.startTitle', 'Start a project')}
+              </h2>
+              <div className="workspace-project-start-actions">
+                <button type="button" className="workspace-project-start-new"
+                  onClick={() => setProjectDialog('templates')}>
+                  <Plus size={16} aria-hidden />
+                  {t('editor.localProjects.new', 'New project')}
+                </button>
+                <button type="button" onClick={() => setProjectDialog('saved-from-start')}>
+                  <FolderOpen size={16} aria-hidden />
+                  {t('editor.localProjects.title', 'Saved projects')}
+                </button>
+                {canOpenProjectFile() && (
+                  <button type="button" onClick={() => void openProjectFile()}>
+                    <HardDrive size={16} aria-hidden />
+                    {t('editor.menu.openDisk', 'Open .vlx from disk…')}
+                  </button>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
       </div>
 
       <footer
@@ -943,6 +997,7 @@ export const EditorPage: React.FC = () => {
           <div className="workspace-status-pane workspace-status-pane--editor">
             <WorkspaceToolButton compact tool="terminal" pressed={consoleOpen} onToggle={toggleWorkspaceTool} />
             <div className="workspace-status-controls">
+              {projectStatus}
               <div className="workspace-status-editor" ref={setStatusBarHost} />
             </div>
           </div>
@@ -954,6 +1009,7 @@ export const EditorPage: React.FC = () => {
               <WorkspaceToolButton compact tool="scope" pressed={oscilloscopeOpen} onToggle={toggleWorkspaceTool} />
             </div>
             <div className="workspace-status-controls">
+              {!codeVisible && projectStatus}
               {activeBoardName && (
             <button
               type="button"
@@ -1010,10 +1066,22 @@ export const EditorPage: React.FC = () => {
           onIndentationChange={(previous) => codeEditorRef.current?.applyIndentationPreferences(previous)}
         />
       )}
-      <NewProjectDialog
-        isOpen={showNewProjectDialog}
-        onClose={() => setShowNewProjectDialog(false)}
-      />
+      {projectDialog === 'start' ? (
+        <LocalProjectsDialog view="start" onClose={dismissProjectStart}
+          onNew={() => setProjectDialog('templates')} onSaved={() => setProjectDialog('saved-from-start')}
+          onOpenDisk={canOpenProjectFile() ? () => openProjectFile(closeProjectDialog) : undefined} />
+      ) : projectDialog === 'templates' ? (
+        <LocalProjectsDialog view="templates" onClose={closeProjectDialog} onBack={showProjectStart}
+          onSaveFailed={projectRoute.leaveProjectRoute} />
+      ) : projectDialog === 'saved' || projectDialog === 'saved-from-start' ? (
+        <LocalProjectsDialog view="saved" onClose={closeProjectDialog}
+          onOpen={projectRoute.openProject}
+          onBack={projectDialog === 'saved-from-start' ? showProjectStart : undefined}
+          onSaveCopy={projectDialog === 'saved' ? () => setProjectDialog('save-copy') : undefined} />
+      ) : projectDialog === 'save' || projectDialog === 'save-copy' ? (
+        <LocalProjectsDialog view="save" copy={projectDialog === 'save-copy'}
+          onClose={closeProjectDialog} />
+      ) : null}
       {/* Slot reserved for the private pro overlay (e.g. agent chat panel).
           Self-hosted builds without an overlay see nothing here. */}
       <div data-velxio-slot="agent-chat" />

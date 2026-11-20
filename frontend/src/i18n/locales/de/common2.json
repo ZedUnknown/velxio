@@ -503,7 +503,10 @@
       "replace": "Ersetzen",
       "account": "Konto",
       "mainMenu": "Menü",
-      "importFromDisk": "Von Datenträger importieren…"
+      "openLocal": "Lokales Projekt öffnen…",
+      "openDisk": ".vlx-Datei öffnen…",
+      "importFromDisk": "Von Datenträger importieren…",
+      "saveAs": "Speichern unter…"
     },
     "inspector": {
       "propertiesTab": "Eigenschaften",
@@ -675,6 +678,48 @@
       "priority": "Priorisierte Kompilierung",
       "showOutput": "Ausgabe anzeigen",
       "hide": "Ausblenden (Kompilierung läuft weiter)"
+    },
+    "newProject": {
+      "title": "Neues Projekt starten",
+      "subtitle": "Wähle einen leeren Arbeitsbereich oder ein Board mit Blink-Beispiel. Der aktuelle Arbeitsbereich wird ersetzt.",
+      "blankTitle": "Leeres Projekt",
+      "blankDesc": "Leerer Arbeitsbereich für eigene Boards und Bauteile"
+    },
+    "localProjects": {
+      "unsavedStatus": "Ungespeicherte Änderungen",
+      "openList": "Gespeicherte Projekte · {{name}}",
+      "opening": "Projekt wird geöffnet…",
+      "startTitle": "Projekt starten",
+      "new": "Neues Projekt",
+      "title": "Gespeicherte Projekte",
+      "loadError": "In diesem Browser gespeicherte Projekte konnten nicht gelesen werden.",
+      "deleteError": "Diese lokale Kopie konnte nicht gelöscht werden.",
+      "saveError": "Das Projekt konnte nicht gespeichert werden.",
+      "saveCopy": "Lokale Kopie speichern",
+      "saveTitle": "Projekt speichern",
+      "projectName": "Projektname",
+      "back": "Zurück",
+      "newDescription": "Beginne leer oder wähle eine Boardvorlage.",
+      "savedDescription": "Öffne ein Projekt, das in diesem Browser gespeichert ist.",
+      "loading": "Lokale Projekte werden geladen…",
+      "empty": "In diesem Browser sind noch keine Projekte gespeichert.",
+      "search": "Projekte suchen",
+      "noMatches": "Keine Projekte entsprechen der Suche.",
+      "lastSaved": "Zuletzt gespeichert",
+      "created": "Erstellt",
+      "renameProject": "{{name}} umbenennen",
+      "rename": "Umbenennen",
+      "deleteProject": "{{name}} löschen",
+      "deleteCopy": "Löschen",
+      "renameTitle": "Lokale Kopie umbenennen",
+      "openTitle": "Gespeichertes Projekt öffnen",
+      "unsaved": "Dieser Arbeitsbereich enthält ungespeicherte Änderungen.",
+      "confirmDelete": "Lokale Kopie von „{{name}}“ und ihren Dateiverlauf löschen?",
+      "deleteOpenCopy": "Der offene Arbeitsbereich bleibt als ungespeicherter Entwurf im Editor.",
+      "discard": "Änderungen verwerfen und öffnen",
+      "untitled": "Unbenanntes Projekt",
+      "creating": "Projekt wird erstellt…",
+      "discardAndCreate": "Änderungen verwerfen und erstellen"
     }
   },
   "about": {

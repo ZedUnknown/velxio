@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { generateUUID } from '../utils/uuid';
 import { isPiBoardKind } from '../types/board';
 import { getProBoard } from '../lib/proBoardRegistry';
+import type { SavedWorkspaceFile } from '../utils/savedWorkspaceFile';
 
 export interface WorkspaceFile {
   id: string;
@@ -243,7 +244,7 @@ interface EditorState {
    *  `folders` restores the tracked EMPTY folders per group (optional —
    *  folders holding files rebuild themselves from the file name prefixes). */
   replaceFileGroups: (
-    groups: Record<string, { name: string; content: string }[]>,
+    groups: Record<string, SavedWorkspaceFile[]>,
     folders?: Record<string, string[]>,
   ) => void;
 
@@ -798,12 +799,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const activeGroupFileId: Record<string, string> = {};
     const openGroupFileIds: Record<string, string[]> = {};
     for (const [gid, files] of Object.entries(groups)) {
-      const wsFiles: WorkspaceFile[] = files.map((f, i) => ({
-        id: i === 0 ? `${gid}-main` : generateUUID(),
-        name: f.name,
-        content: f.content,
-        modified: false,
-      }));
+      const usedIds = new Set<string>();
+      const wsFiles: WorkspaceFile[] = files.map((file, index) => {
+        const preferredId = file.id || (index === 0 ? `${gid}-main` : generateUUID());
+        const id = usedIds.has(preferredId) ? generateUUID() : preferredId;
+        usedIds.add(id);
+        return { id, name: file.name, content: file.content, modified: false };
+      });
       fileGroups[gid] = wsFiles;
       const firstId = wsFiles[0]?.id ?? `${gid}-main`;
       activeGroupFileId[gid] = firstId;
