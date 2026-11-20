@@ -278,6 +278,19 @@
   min-height: 0;
 }
 
+.editor-document .monaco-editor .suggest-widget,
+.editor-document .monaco-editor .suggest-details {
+  border-radius: 6px;
+}
+
+.editor-document .monaco-editor :is(.suggest-widget, .suggest-details-container, .suggest-details) {
+  max-height: var(--suggestion-pane-height, none);
+}
+
+.editor-document .monaco-editor :is(.suggest-details-container, .suggest-details) {
+  max-width: var(--suggestion-pane-width, none);
+}
+
 .workspace-status-bar {
   position: relative;
   z-index: 15;

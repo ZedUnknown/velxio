@@ -1,5 +1,5 @@
 import Editor, { type Monaco } from '@monaco-editor/react';
-import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { editor as MonacoEditor } from 'monaco-editor';
@@ -7,7 +7,9 @@ import { CHIP_GROUP_PREFIX, useEditorStore } from '../../store/useEditorStore';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { useCompileLogsStore } from '../../store/useCompileLogsStore';
 import { registerRetroAsm } from './retroAsmLanguage';
+import { includePathPrefix } from '../../lib/arduinoSymbols';
 import { attachIntellisenseMonaco } from '../../lib/intellisenseRegistry';
+import { bindIntellisenseModel, completionWasInterrupted, registerEditorIntellisense, workspaceModelPath } from '../../lib/editorIntellisense';
 import { CHIP_JSON_SCHEMA, CHIP_JSON_SCHEMA_URI } from './chipJsonSchema';
 import { defineVelxioThemes, monacoThemeFor } from './monacoThemes';
 import { useResolvedTheme } from '../../hooks/useTheme';
@@ -15,6 +17,7 @@ import { registerEditorCommand, setEditingPane } from '../../lib/editorCommands'
 import { indentationFor, useEditorPreferences, type EditorPreferences, type Indentation } from '../../store/useEditorPreferences';
 import { EditorStatusBar, type EditorStatus, type IndentationChange } from './EditorStatusBar';
 import { EditorLanguagePicker } from './EditorLanguagePicker';
+import { keepSuggestionsInEditor } from './suggestionBounds';
 import { detectEditorLanguage, editorLanguageLabel, getEditorLanguage, renameForEditorLanguage } from '../../lib/editorLanguages';
 import { isChipManifestFile, isChipSourceFile } from '../../services/chipFiles';
 import { indentationEdits } from './indentationEdits';
@@ -58,7 +61,26 @@ export const CodeEditor = ({ ref, statusBarHost }: {
     editor: MonacoEditor.IStandaloneCodeEditor;
   } | null>(null);
   const instance = mounted?.key === mountKey ? mounted.editor : null;
+  useEffect(() => {
+    if (instance && !manifestViewBoardId) return keepSuggestionsInEditor(instance);
+  }, [instance, manifestViewBoardId]);
   const monacoRef = useRef<Monaco | null>(null);
+  useLayoutEffect(() => {
+    const model = instance?.getModel();
+    if (!instance || !model || !activeFile || manifestViewBoardId) return;
+    const unbind = bindIntellisenseModel(model, {
+      groupId: activeGroupId, fileId: activeFile.id,
+      refreshSuggestions(position) {
+        if (instance.getPosition()?.equals(position) && instance.hasTextFocus() &&
+            instance.getDomNode()?.querySelector('.suggest-widget.visible')) {
+          // Monaco's triggerSuggest action is disabled while the list is visible.
+          instance.trigger('languageServer', 'hideSuggestWidget', null);
+          instance.trigger('languageServer', 'editor.action.triggerSuggest', { auto: true });
+        }
+      },
+    });
+    return unbind;
+  }, [instance, activeGroupId, activeFile?.id, manifestViewBoardId]);
 
 
   const compileLogs = useCompileLogsStore((state) => state.logs);
@@ -293,6 +315,52 @@ export const CodeEditor = ({ ref, statusBarHost }: {
     };
   }, [instance, activeFileId, manifestViewBoardId]);
   useEffect(() => {
+    if (!instance || !activeFileId || manifestViewBoardId) return;
+    const unregister = registerEditorCommand('edit.triggerSuggestions', () => {
+      if (!instance.getModel()) return;
+      instance.focus();
+      instance.trigger('editMenu', 'editor.action.triggerSuggest', null);
+    });
+    // Monaco can still be waiting for the first result when the next letters
+    // invalidate it. Retry at the settled cursor if the widget is still closed.
+    const custom = ['cpp', 'python', 'yaml'].includes(language);
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const cancelRetry = () => { clearTimeout(retryTimer); retryTimer = undefined; };
+    const typing = custom ? instance.onDidChangeModelContent((event) => {
+      const scheduled = retryTimer !== undefined;
+      cancelRetry();
+      const [change] = event.changes;
+      if (event.isFlush || event.isUndoing || event.isRedoing ||
+          event.changes.length !== 1 || change?.text.length !== 1) return;
+      const model = instance.getModel();
+      if (!model) return;
+      const line = change.range.startLineNumber;
+      const column = change.range.startColumn + 1;
+      const prefix = model.getLineContent(line).slice(0, column - 1);
+      const include = language === 'cpp' && includePathPrefix(prefix) !== undefined;
+      if (!include && (!/\w/.test(change.text) || (!scheduled && !completionWasInterrupted(model)))) return;
+      const version = model.getVersionId();
+      retryTimer = setTimeout(() => {
+        retryTimer = undefined;
+        const position = instance.getPosition();
+        if (instance.getModel() !== model || !instance.hasTextFocus() ||
+            model.getVersionId() !== version ||
+            position?.lineNumber !== line || position.column !== column ||
+            instance.getDomNode()?.querySelector('.suggest-widget.visible')) return;
+        instance.trigger('typing', 'editor.action.triggerSuggest', null);
+      }, 80);
+    }) : undefined;
+    const keyDown = custom ? instance.onKeyDown((event) => {
+      if (event.browserEvent.key === 'Escape') cancelRetry();
+    }) : undefined;
+    return () => {
+      cancelRetry();
+      typing?.dispose();
+      keyDown?.dispose();
+      unregister();
+    };
+  }, [instance, activeFileId, language, manifestViewBoardId]);
+  useEffect(() => {
     setFormatterMessages({
       failedTitle: () => t('editor.format.failed', 'Could not format the file'),
     });
@@ -338,9 +406,9 @@ export const CodeEditor = ({ ref, statusBarHost }: {
         language={language}
         theme={theme}
         value={activeFile?.content ?? ''}
-        {...(activeFile && activeFile.name.endsWith('chip.json')
-          ? { path: 'velxio-ws/' + activeGroupId + '/' + activeFile.name }
-          : {})}
+        // The URI identifies both the board's file group and the file across
+        // editor remounts, so Go to Definition can open a different tab.
+        path={activeFile && !manifestViewBoardId ? workspaceModelPath(activeGroupId, activeFile) : undefined}
         beforeMount={(monaco: Monaco) => {
           monacoRef.current = monaco;
           // Both velxio themes have to exist before Monaco is asked to use
@@ -353,6 +421,8 @@ export const CodeEditor = ({ ref, statusBarHost }: {
           // instance). Monaco adds the context-menu row and Shift+Alt+F by
           // itself once a provider exists.
           registerCodeFormatters(monaco);
+          registerEditorIntellisense(monaco);
+          // An installed overlay can still provide its own completion engine.
           attachIntellisenseMonaco(monaco);
           // Validate chip.json manifests against the schema (idempotent per
           // monaco instance).
@@ -380,6 +450,9 @@ export const CodeEditor = ({ ref, statusBarHost }: {
           minimap: { enabled: settings.minimap },
           readOnly: !activeFile,
           // Anchor suggestions to the code pane when the circuit is beside it.
+          allowOverflow: false,
+          quickSuggestions: { other: 'on', comments: 'off', strings: language === 'yaml' ? 'on' : 'off' },
+          suggestOnTriggerCharacters: true,
           // Keep quick suggestions alive inside snippet placeholders:
           // completing `#include <|>` or an if-condition placeholder must
           // still offer suggestions while the snippet session is active.

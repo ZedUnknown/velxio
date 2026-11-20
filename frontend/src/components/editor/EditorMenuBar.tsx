@@ -204,6 +204,12 @@ export const EditorMenuBar: React.FC<{
     { kind: 'separator' },
     {
       kind: 'command',
+      id: 'edit.triggerSuggestions',
+      label: t('editor.menu.triggerSuggestions', 'Trigger Suggestions'),
+      shortcut: 'Ctrl+Space',
+    },
+    {
+      kind: 'command',
       id: 'edit.formatDocument',
       label: t('editor.menu.formatDocument', 'Format document'),
       shortcut: 'Shift+Alt+F',

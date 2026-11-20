@@ -501,6 +501,7 @@
       "paste": "貼り付け",
       "find": "検索",
       "replace": "置換",
+      "triggerSuggestions": "候補を表示",
       "account": "アカウント",
       "mainMenu": "メニュー",
       "importFromDisk": "ディスクからインポート…"

@@ -509,6 +509,7 @@
       "paste": "Pegar",
       "find": "Buscar",
       "replace": "Reemplazar",
+      "triggerSuggestions": "Mostrar sugerencias",
       "mainMenu": "Menú",
       "importFromDisk": "Importar desde el disco…"
     },

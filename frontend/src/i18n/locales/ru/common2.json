@@ -501,6 +501,7 @@
       "paste": "Вставить",
       "find": "Найти",
       "replace": "Заменить",
+      "triggerSuggestions": "Показать подсказки",
       "account": "Аккаунт",
       "mainMenu": "Меню",
       "importFromDisk": "Импортировать с диска…"

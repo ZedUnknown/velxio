@@ -501,6 +501,7 @@
       "paste": "Einfügen",
       "find": "Suchen",
       "replace": "Ersetzen",
+      "triggerSuggestions": "Vorschläge anzeigen",
       "account": "Konto",
       "mainMenu": "Menü",
       "importFromDisk": "Von Datenträger importieren…"

@@ -501,6 +501,7 @@
       "paste": "粘贴",
       "find": "查找",
       "replace": "替换",
+      "triggerSuggestions": "显示建议",
       "account": "账户",
       "mainMenu": "菜单",
       "importFromDisk": "从磁盘导入…"

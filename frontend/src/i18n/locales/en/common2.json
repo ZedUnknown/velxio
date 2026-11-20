@@ -536,6 +536,7 @@
       "paste": "Paste",
       "find": "Find",
       "replace": "Replace",
+      "triggerSuggestions": "Trigger Suggestions",
       "mainMenu": "Menu",
       "importFromDisk": "Import from disk…"
     },

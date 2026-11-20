@@ -501,6 +501,7 @@
       "paste": "Coller",
       "find": "Rechercher",
       "replace": "Remplacer",
+      "triggerSuggestions": "Afficher les suggestions",
       "account": "Compte",
       "mainMenu": "Menu",
       "importFromDisk": "Importer depuis le disque…"

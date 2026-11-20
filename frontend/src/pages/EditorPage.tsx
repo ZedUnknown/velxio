@@ -17,7 +17,7 @@ import { getLocaleFromPath, localizedPath } from '../i18n/path';
 import { restoreStashedWorkspace } from '../utils/workspaceDraft';
 import { whenNewsClear } from '../lib/newsGate';
 import {
-  WorkspaceActivityBar, WorkspaceToolButton, WorkspaceSearch,
+  WorkspaceActivityBar, WorkspaceSearch, WorkspaceToolButton,
   type WorkspaceTool, type WorkspaceView,
 } from '../components/editor/WorkspaceSidebar';
 
