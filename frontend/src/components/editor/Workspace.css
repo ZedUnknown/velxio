@@ -799,6 +799,18 @@ button.workspace-status-board:hover,
   margin-inline: 9px;
 }
 
+.workspace-library-missing {
+  position: relative;
+  list-style: none;
+}
+
+.workspace-library-missing > svg {
+  position: absolute;
+  inset-inline-start: -17px;
+  inset-block-start: 2px;
+  color: var(--color-feedback-warning);
+}
+
 .workspace-sidebar-view > button,
 .local-projects-dialog input,
 .local-projects-dialog button {

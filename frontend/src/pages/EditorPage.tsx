@@ -14,7 +14,7 @@ import { EditorSettings } from '../components/editor/EditorSettings';
 import { EditorQuickPick } from '../components/editor/EditorQuickPick';
 import { LocalProjectsDialog } from '../components/editor/LocalProjectsDialog';
 import {
-  WorkspaceActivityBar, WorkspaceSearch, WorkspaceToolButton,
+  WorkspaceActivityBar, WorkspaceLibraries, WorkspaceSearch, WorkspaceToolButton,
   type WorkspaceTool, type WorkspaceView,
 } from '../components/editor/WorkspaceSidebar';
 
@@ -31,6 +31,7 @@ import {
   canSaveProjectFile,
   openProjectFile,
   saveProjectFileAs,
+  upgradeWorkspaceLibraryVersions,
   useLocalWorkspace,
   watchLocalWorkspace,
 } from '../lib/localWorkspace';
@@ -129,6 +130,11 @@ export const EditorPage: React.FC = () => {
     setProjectDialog((dialog) => dialog ?? 'start');
   }, []);
   useLayoutEffect(() => watchLocalWorkspace(), []);
+  useEffect(() => {
+    const request = new AbortController();
+    void upgradeWorkspaceLibraryVersions(request.signal);
+    return () => request.abort();
+  }, [workspaceVersion]);
   const projectRoute = useEditorProjectRoute({
     clearWorkspace: clearWorkspaceForStarter,
     showStartup,
@@ -797,6 +803,7 @@ export const EditorPage: React.FC = () => {
             {sidebarView === 'search' && <WorkspaceSearch onOpen={() => {
               if (isMobile) setExplorerOpen(false);
             }} />}
+            {sidebarView === 'libraries' && <WorkspaceLibraries />}
           </aside>
           {!isMobile && (
             <div

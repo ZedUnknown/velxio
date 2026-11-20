@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { createStore, entries, get, set } from 'idb-keyval';
 import type { AutoSaveState } from '../hooks/useAutoSaveProject';
 import { flushChipFileSync } from '../services/chipFiles';
+import { resolveMissingLibraryVersions } from '../services/libraryService';
 import {
   deleteLocalProject,
   getLocalProject,
@@ -16,6 +17,7 @@ import { showConfirmDialog, showMessageDialog } from '../store/useMessageDialogS
 import { useProjectStore } from '../store/useProjectStore';
 import { useSimulatorStore } from '../store/useSimulatorStore';
 import { generateUUID } from '../utils/uuid';
+import { bareLibName, libraryVersionFromSpec } from '../utils/libraryManifest';
 import { buildVlxPayload, loadVlxPayload, parseVlxFile, type VlxPayload } from '../utils/vlxFile';
 
 interface DiskHandle extends FileSystemFileHandle {
@@ -116,6 +118,41 @@ export function hasUnsavedLocalChanges(): boolean {
       files.some((f) => f.modified),
     )
   );
+}
+
+export async function upgradeWorkspaceLibraryVersions(signal: AbortSignal): Promise<void> {
+  const version = workspaceVersion();
+  const openedTarget = currentTarget();
+  const simulator = useSimulatorStore.getState();
+  if (useProjectStore.getState().currentExampleId) return;
+  const dependencies = simulator.boards.flatMap((board) => board.libraries ?? []);
+  const catalog = await resolveMissingLibraryVersions(dependencies, signal);
+  if (!catalog.size || signal.aborted || workspaceVersion() !== version) return;
+
+  // Write a metadata-only migration even with auto-save disabled, provided the
+  // loaded project is still clean and its existing destination can be written.
+  const writable = openedTarget?.kind === 'browser' || (openedTarget?.kind === 'disk' &&
+    await openedTarget.handle.queryPermission({ mode: 'readwrite' }).catch(() => 'denied') === 'granted');
+  if (signal.aborted || workspaceVersion() !== version) return;
+  const saveMigration = writable && currentTarget() === openedTarget && !pending && !hasUnsavedLocalChanges();
+  let changed = false;
+  useSimulatorStore.setState((state) => {
+    const boards = state.boards.map((board) => {
+      const libraries = board.libraries;
+      if (!libraries?.length) return board;
+      const next = libraries.map((spec) => {
+        if (typeof spec !== 'string' || libraryVersionFromSpec(spec)) return spec;
+        const name = bareLibName(spec).trim();
+        const latest = catalog.get(name.toLowerCase());
+        return latest ? `${name}@${latest}` : spec;
+      });
+      if (next.every((spec, index) => spec === libraries[index])) return board;
+      changed = true;
+      return { ...board, libraries: next };
+    });
+    return changed ? { boards } : state;
+  });
+  if (changed && saveMigration) await saveLocalWorkspace({ manual: false });
 }
 
 export async function openLocalWorkspace(id: string, signal: AbortSignal): Promise<boolean> {

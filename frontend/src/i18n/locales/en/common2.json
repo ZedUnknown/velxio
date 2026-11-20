@@ -232,9 +232,32 @@
       "searchChip": "Search"
     },
     "libraryManager": {
-      "title": "LIBRARY MANAGER",
+      "title": "Library Manager",
       "searchTab": "Search",
       "installedTab": "Installed",
+      "browseTab": "Browse Libraries",
+      "addToProject": "Add to project",
+      "libraryMissing": "Required by this board and not installed",
+      "checkingInventory": "Checking installed libraries…",
+      "installDependency": "Install {{name}} for this board",
+      "installDependencyButton": "Install",
+      "inventoryUnavailable": "Could not check whether this library is installed",
+      "pinnedVersionUnavailable": "Version {{version}} of {{name}} is unavailable. The board still requires that version.",
+      "filterInstalled": "Filter installed libraries…",
+      "searchCatalog": "Search the library catalog…",
+      "noneInProject": "No libraries added to this board yet.",
+      "catalogPrompt": "Search by library name or topic to find a library to add.",
+      "featured": "Featured libraries",
+      "loadingDetails": "Loading library details…",
+      "catalogVersion": "Latest release",
+      "inWorkspace": "In workspace",
+      "removeDependency": "Remove {{name}} from this board",
+      "removeFromBoard": "Remove from this board",
+      "version": "Version",
+      "category": "Category",
+      "license": "License",
+      "website": "Library website",
+      "noDetails": "No additional details are available.",
       "filterPlaceholder": "Filter your search...",
       "searchingFor": "Searching \"{{query}}\"…",
       "loadingLibraries": "Loading libraries…",
@@ -247,7 +270,8 @@
       "uninstalling": "Uninstalling...",
       "loadingInstalled": "Loading installed libraries...",
       "noneInstalled": "No libraries installed yet.",
-      "useSearchTab": "Use the Search tab to install libraries."
+      "useSearchTab": "Use the Search tab to install libraries.",
+      "versionInstallUnavailable": "Could not install {{name}} {{version}}. The board’s library declaration was kept as it was."
     },
     "installLibs": {
       "title": "REQUIRED LIBRARIES",
@@ -623,6 +647,7 @@
       "settings": "Settings",
       "search": "Search",
       "explorer": "Explorer",
+      "libraries": "Libraries",
       "accountUnavailable": "Accounts are unavailable in this build.",
       "terminal": "Terminal",
       "serial": "Serial Monitor",
@@ -633,7 +658,10 @@
       "dragOpenSidebar": "Drag to open sidebar",
       "status": "Workspace status",
       "switchBoard": "Switch board",
-      "selectBoard": "Select board"
+      "selectBoard": "Select board",
+      "noLibraries": "This board has no declared libraries.",
+      "manageLibraries": "Manage libraries",
+      "noBoard": "Select a board to see its libraries."
     },
     "search": {
       "query": "Search workspace",
