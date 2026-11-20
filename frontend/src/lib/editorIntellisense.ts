@@ -1,5 +1,11 @@
 import type { CancellationToken, Position, editor, languages } from 'monaco-editor';
-import { includePathPrefix } from './arduinoSymbols';
+import {
+  arduinoCompletions,
+  arduinoHover,
+  getLibraryRevision,
+  includePathPrefix,
+  supportsArduinoSymbols,
+} from './arduinoSymbols';
 import { hasIntellisenseImpl } from './intellisenseRegistry';
 import type { Candidate } from './codeCompletions';
 import { useEditorStore, type WorkspaceFile } from '../store/useEditorStore';
@@ -71,6 +77,7 @@ function current(model: editor.ITextModel) {
     board?.boardKind,
     board?.languageMode,
     board?.libraries,
+    getLibraryRevision(),
   ]);
   return { binding, file, files, board, stamp };
 }
@@ -116,6 +123,17 @@ function localItems(
   );
 }
 
+function mergeItems(primary: languages.CompletionItem[], fallback: languages.CompletionItem[]) {
+  const labels = new Set(primary.map((item) => item.filterText ?? item.label));
+  return primary.concat(
+    fallback.filter(({ label }) => {
+      if (labels.has(label)) return false;
+      labels.add(label);
+      return true;
+    }),
+  );
+}
+
 export function registerEditorIntellisense(monaco: Monaco) {
   if (installed.has(monaco)) return;
   installed.add(monaco);
@@ -147,13 +165,22 @@ export function registerEditorIntellisense(monaco: Monaco) {
     }),
   });
 
+  // A late server result can refresh the open widget once at the same cursor.
+  // The retrigger consumes the completed list without sending a second request.
+  const readyLists = new WeakMap<
+    editor.ITextModel,
+    { position: Position; fresh: () => boolean; list: languages.CompletionList }
+  >();
   for (const language of ['cpp', 'c', 'python']) {
     monaco.languages.registerCompletionItemProvider(language, {
       triggerCharacters: language === 'python' ? ['.', ' '] : ['.', '>', ':', '<', '"', '/', '#'],
       provideCompletionItems: trackCompletion(async (model, position, trigger, token) => {
         const ctx = snapshot(model, token);
         if (!ctx || hasIntellisenseImpl()) return;
-        const { file, board, files } = ctx;
+        const { file, board, binding, files } = ctx;
+        const ready = readyLists.get(model);
+        readyLists.delete(model);
+        if (ready?.position.equals(position) && ready.fresh()) return ready.list;
         const prefix = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
         const header = language !== 'python' ? includePathPrefix(prefix) : undefined;
         const ch = trigger.triggerCharacter;
@@ -161,6 +188,7 @@ export function registerEditorIntellisense(monaco: Monaco) {
         if (ch && ['<', '"', '/'].includes(ch) && header === undefined) return;
         if ((ch === '>' && !prefix.endsWith('->')) || (ch === ':' && !prefix.endsWith('::')))
           return;
+        const arduino = board && language !== 'python' && supportsArduinoSymbols(board);
         const headers = files.map((f) => f.name).filter((name) => /\.(h|hpp|hh|hxx)$/i.test(name));
         const word = model.getWordUntilPosition(position);
         const span = new monaco.Range(
@@ -169,6 +197,10 @@ export function registerEditorIntellisense(monaco: Monaco) {
           position.lineNumber,
           position.column,
         );
+        const remote = async (): Promise<languages.CompletionList> => ({
+          suggestions: arduino ? await arduinoCompletions(monaco, model, position, board, headers, token) : [],
+        });
+        const pending = remote();
         const { codeCandidates, standardHeaders } = await import('./codeCompletions');
         if (!ctx.fresh()) return;
         const local =
@@ -192,8 +224,49 @@ export function registerEditorIntellisense(monaco: Monaco) {
                 ),
                 span,
               );
-        if (ctx.fresh() && !hasIntellisenseImpl()) return { suggestions: local };
+        if (arduino)
+          local.push(
+            ...(await arduinoCompletions(monaco, model, position, board, headers, token, true)),
+          );
+        if (!ctx.fresh() || hasIntellisenseImpl()) return;
+        const complete = pending.then((list) => ({
+          ...list,
+          suggestions: mergeItems(list.suggestions, local),
+        }));
+        const typed = (header ?? word.word).toLowerCase();
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const result = local.some(
+          (item) => typeof item.label === 'string' && item.label.toLowerCase().startsWith(typed),
+        )
+          ? await Promise.race([
+              complete,
+              new Promise<null>((resolve) => {
+                timer = setTimeout(() => resolve(null), 65);
+              }),
+            ])
+          : await complete;
+        clearTimeout(timer);
+        if (!ctx.fresh() || hasIntellisenseImpl()) return;
+        if (result) return result;
+        void complete.then((list) => {
+          if (!ctx.fresh() || hasIntellisenseImpl()) return;
+          // Closing the old widget cancels its token. Reuse the prepared list
+          // only while the document, board and workspace still match.
+          readyLists.set(model, { position, fresh: ctx.matchesModel, list });
+          binding.refreshSuggestions(position);
+        });
+        return { suggestions: mergeItems([], local), incomplete: true };
       }),
+    });
+    monaco.languages.registerHoverProvider(language, {
+      async provideHover(model, position, token) {
+        const ctx = snapshot(model, token);
+        if (!ctx || hasIntellisenseImpl()) return;
+        const { board } = ctx;
+        if (!board || !supportsArduinoSymbols(board) || language === 'python') return;
+        const hover = await arduinoHover(monaco, model, position, board, token);
+        if (ctx.fresh() && !hasIntellisenseImpl()) return hover;
+      },
     });
   }
 }
