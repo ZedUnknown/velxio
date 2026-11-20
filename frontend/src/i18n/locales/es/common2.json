@@ -207,7 +207,11 @@
       "boards": "Placas",
       "loading": "Cargando componentes...",
       "noResults": "No se encontraron componentes",
-      "clearFilters": "Limpiar filtros"
+      "clearFilters": "Limpiar filtros",
+      "categoriesTree": "Categorías",
+      "recentlyUsed": "Usados recientemente",
+      "searchResults": "Resultados de búsqueda",
+      "searchChip": "Búsqueda"
     },
     "libraryManager": {
       "title": "ADMINISTRADOR DE LIBRERÍAS",

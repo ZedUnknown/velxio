@@ -205,7 +205,11 @@
       "boards": "Boards",
       "loading": "Komponenten werden geladen...",
       "noResults": "Keine Komponenten gefunden",
-      "clearFilters": "Filter löschen"
+      "clearFilters": "Filter löschen",
+      "categoriesTree": "Kategorien",
+      "recentlyUsed": "Zuletzt verwendet",
+      "searchResults": "Suchergebnisse",
+      "searchChip": "Suche"
     },
     "libraryManager": {
       "title": "BIBLIOTHEKSVERWALTUNG",

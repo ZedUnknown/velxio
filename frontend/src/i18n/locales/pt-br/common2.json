@@ -205,7 +205,11 @@
       "boards": "Placas",
       "loading": "Carregando componentes...",
       "noResults": "Nenhum componente encontrado",
-      "clearFilters": "Limpar filtros"
+      "clearFilters": "Limpar filtros",
+      "categoriesTree": "Categorias",
+      "recentlyUsed": "Usados recentemente",
+      "searchResults": "Resultados da busca",
+      "searchChip": "Busca"
     },
     "libraryManager": {
       "title": "GERENCIADOR DE BIBLIOTECAS",

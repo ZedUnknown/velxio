@@ -205,7 +205,11 @@
       "boards": "Cartes",
       "loading": "Chargement des composants...",
       "noResults": "Aucun composant trouvé",
-      "clearFilters": "Effacer les filtres"
+      "clearFilters": "Effacer les filtres",
+      "categoriesTree": "Catégories",
+      "recentlyUsed": "Utilisés récemment",
+      "searchResults": "Résultats de recherche",
+      "searchChip": "Recherche"
     },
     "libraryManager": {
       "title": "GESTIONNAIRE DE BIBLIOTHÈQUES",
