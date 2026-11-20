@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { CircleAlert, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { ChevronDown, CircleAlert, CircuitBoard, Layers, LoaderCircle, Wrench, X } from 'lucide-react';
 import { registerEditorCommand } from '../../lib/editorCommands';
 import { publishCompileOutput } from '../../lib/intellisenseRegistry';
 import { useEditorStore, chipFileGroupId } from '../../store/useEditorStore';
@@ -14,8 +14,8 @@ import { useOscilloscopeStore } from '../../store/useOscilloscopeStore';
 import { type VerificationResult } from '../../simulation/verify/circuitVerifier';
 import { verifyCircuitFromStore } from '../../simulation/verify/verifyFromStore';
 import { CircuitVerificationModal } from '../simulator/CircuitVerificationModal';
-import type { BoardKind, LanguageMode } from '../../types/board';
-import { BOARD_KIND_FQBN, BOARD_SUPPORTS_ESPIDF, BOARD_SUPPORTS_MICROPYTHON, fqbnForLanguage, isKnownBoardKind, isPiBoardKind, boardDisplayName } from '../../types/board';
+import type { BoardKind } from '../../types/board';
+import { BOARD_KIND_FQBN, fqbnForLanguage, isKnownBoardKind, isPiBoardKind, boardDisplayName } from '../../types/board';
 import { compileCode } from '../../services/compilation';
 import { compileOptionsForBoard } from '../../utils/boardCompile';
 import {
@@ -52,7 +52,6 @@ import {
   trackOpenLibraryManager,
 } from '../../utils/analytics';
 import './EditorToolbar.css';
-import { ThemeToggle } from '../layout/ThemeToggle';
 import { getResolvedTheme } from '../../lib/theme';
 import { isSeatWire } from '../../utils/breadboardNets';
 
@@ -183,17 +182,16 @@ export const EditorToolbar = ({
   const { files, codeChangedSinceLastCompile, markCompiled } = useEditorStore();
   const {
     boards,
+    components,
     activeBoardId,
     compileBoardProgram,
     loadMicroPythonProgram,
-    setBoardLanguageMode,
     updateBoard,
     startBoard,
     stopBoard,
     resetBoard,
     // legacy compat
     startSimulation,
-    stopSimulation,
     resetSimulation,
     running,
     compiledHex,
@@ -201,23 +199,26 @@ export const EditorToolbar = ({
 
   const activeBoard = boards.find((b) => b.id === activeBoardId) ?? boards[0];
   const currentProject = useProjectStore((s) => s.currentProject);
-
   // Board-less mode: digital / analog SPICE-only circuits. The Run / Stop
   // buttons toggle the SPICE solver's `paused` flag — pausing freezes every
   // LED at its current brightness so the user can inspect the state, and
   // resuming flushes the most recent switch toggle through the engine.
   const electricalPaused = useElectricalStore((s) => s.paused);
+  const electricalEngaged = useElectricalStore((s) => s.submittedNetlist !== '');
   const setElectricalPaused = useElectricalStore((s) => s.setPaused);
   const isBoardless = boards.length === 0;
-  const digitalRunning = isBoardless && !electricalPaused;
+  const hasCircuitParts = components.length > 0;
+  const digitalRunning = isBoardless && hasCircuitParts && electricalEngaged && !electricalPaused;
   // Any board actually running — the correct multi-target signal for the
   // Run-All / Stop buttons (the flat `running` flag only tracks the ACTIVE
   // board, so it misreports a multi-board or non-active-board run).
   const anyBoardRunning = boards.some((b) => b.running);
+  const canStop = anyBoardRunning || digitalRunning;
   // Multi-board: the primary Run button runs ALL boards (the whole wired
   // project is one system — running a subset is almost never intended), with a
   // split-menu to still run just the active board. Single-board is unchanged.
   const isMultiBoard = boards.length > 1;
+
   // Boards this build/browser can put on real hardware (lib/flashRequest).
   const flashTargets = boards.filter((b) => !boardFlashSupport(b).disabled);
 
@@ -277,7 +278,9 @@ export const EditorToolbar = ({
   const firmwareInputRef = useRef<HTMLInputElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [missingLibHint, setMissingLibHint] = useState(false);
-  // Split-button menu for the multi-board Run control ("Run all" / "Run active only").
+  // The split controls keep project-wide commands behind their own arrows.
+  const [buildMenuOpen, setBuildMenuOpen] = useState(false);
+  const buildMenuRef = useRef<HTMLDivElement>(null);
   const [runMenuOpen, setRunMenuOpen] = useState(false);
   const runMenuRef = useRef<HTMLDivElement>(null);
   // "Flash to real board" next to Run. It used to live only in the board's
@@ -294,7 +297,10 @@ export const EditorToolbar = ({
   // in the FileExplorer) asks for it via a window event. Avoids prop-drilling
   // the modal state down to the explorer.
   useEffect(() => {
-    const open = () => setLibManagerOpen(true);
+    const open = () => {
+      trackOpenLibraryManager();
+      setLibManagerOpen(true);
+    };
     window.addEventListener('velxio-open-library-manager', open);
     return () => window.removeEventListener('velxio-open-library-manager', open);
   }, []);
@@ -330,7 +336,25 @@ export const EditorToolbar = ({
   }, [setCompileLogs]);
 
 
-  // Close the Run split-menu on outside click / Escape (mirrors the more-menu).
+  useEffect(() => {
+    if (!buildMenuOpen) return;
+    const onClickOutside = (event: MouseEvent) => {
+      if (!buildMenuRef.current?.contains(event.target as Node)) setBuildMenuOpen(false);
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setBuildMenuOpen(false);
+      buildMenuRef.current?.querySelector<HTMLButtonElement>('.tb-btn-build-caret')?.focus();
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('mousedown', onClickOutside);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [buildMenuOpen]);
+
+  // Close the Run split-menu on outside click / Escape.
   useEffect(() => {
     if (!runMenuOpen) return;
     const onClickOutside = (e: MouseEvent) => {
@@ -803,6 +827,7 @@ export const EditorToolbar = ({
   );
 
   const handleRun = async (skipVerify = false) => {
+    if (isBoardless && !hasCircuitParts) return;
     console.log('[handleRun] click', { activeBoardId, running, codeChangedSinceLastCompile });
 
     // Pro gate, first thing: a run the gate refuses must not compile first.
@@ -1060,6 +1085,7 @@ export const EditorToolbar = ({
   };
 
   const handleStop = () => {
+    if (!canStop) return;
     trackStopSimulation();
     if (isBoardless) {
       // Freeze the chip tick (the paused flag) AND clear the chip's output
@@ -1072,9 +1098,7 @@ export const EditorToolbar = ({
     // Stop EVERY running board — Run-All can start several, and leaving any
     // running keeps chips ticking (their gate is boards.some(running)).
     const runningBoards = useSimulatorStore.getState().boards.filter((b) => b.running);
-    if (runningBoards.length > 0) runningBoards.forEach((b) => stopBoard(b.id));
-    else if (activeBoardId) stopBoard(activeBoardId);
-    else stopSimulation();
+    runningBoards.forEach((b) => stopBoard(b.id));
     // A chip wired to a board drives its LEDs via its own SPICE sources, which
     // stopBoard doesn't touch — clear them so those LEDs also go dark.
     clearAllChipDrives();
@@ -1763,108 +1787,76 @@ export const EditorToolbar = ({
       registerEditorCommand('sim.record', () => menuCommandsRef.current.record()),
       registerEditorCommand('sim.compile', () => menuCommandsRef.current.compile()),
       registerEditorCommand('sim.run', () => menuCommandsRef.current.run()),
-      registerEditorCommand('sim.stop', () => menuCommandsRef.current.stop()),
       registerEditorCommand('sim.resetBoard', () => menuCommandsRef.current.resetBoard()),
       registerEditorCommand('view.toggleConsole', () => menuCommandsRef.current.toggleConsole()),
     ];
     return () => offs.forEach((off) => off());
   }, []);
+  useEffect(() => {
+    if (canStop) return registerEditorCommand('sim.stop', () => menuCommandsRef.current.stop());
+  }, [canStop]);
 
   return (
     <>
       <div className="editor-toolbar-wrapper">
         <div className="editor-toolbar" ref={toolbarRef}>
-          {/* Language selector — only when active board supports an
-              alternative to Arduino C++ (MicroPython on Pico/ESP32 boards,
-              pure ESP-IDF on the ESP32 family — issue #139). The board
-              context pill that used to live here was removed: it duplicated
-              the BoardSelector dropdown elsewhere in the toolbar. */}
-          {activeBoard &&
-            (BOARD_SUPPORTS_MICROPYTHON.has(activeBoard.boardKind) ||
-              BOARD_SUPPORTS_ESPIDF.has(activeBoard.boardKind)) && (
-            <select
-              className="tb-lang-select"
-              value={activeBoard.languageMode ?? 'arduino'}
-              onChange={(e) => {
-                if (activeBoardId)
-                  setBoardLanguageMode(activeBoardId, e.target.value as LanguageMode);
-              }}
-              title={t('editor.toolbar.languageMode')}
-              style={{
-                background: 'var(--wb-5)',
-                color: 'var(--wb-12)',
-                border: '1px solid var(--wb-7)',
-                borderRadius: 4,
-                height: 28,
-                alignSelf: 'center',
-                padding: '0 6px',
-                fontSize: 12,
-                cursor: 'pointer',
-                outline: 'none',
-                marginRight: 4,
-              }}
-            >
-              {/* Arduino only when the kind actually HAS an FQBN: a board
-                  with none (the ESP32-C5 kits — no arduino-esp32 core exists)
-                  cannot compile in this mode, and offering it just lands the
-                  user on "No FQBN for board kind". */}
-              {!!BOARD_KIND_FQBN[activeBoard.boardKind] && (
-                <option value="arduino">Arduino C++</option>
-              )}
-              {BOARD_SUPPORTS_MICROPYTHON.has(activeBoard.boardKind) && (
-                <option value="micropython">MicroPython</option>
-              )}
-              {BOARD_SUPPORTS_ESPIDF.has(activeBoard.boardKind) && (
-                <option value="espidf">ESP-IDF</option>
-              )}
-            </select>
-          )}
-
           <div className="toolbar-group">
-            {/* Compile */}
-            <button
-              onClick={handleCompile}
-              disabled={compiling || !activeBoard}
-              className="tb-btn tb-btn-compile"
-              title={
-                !activeBoard
-                  ? t('editor.toolbar.compile.addBoard')
-                  : compiling
-                    ? t('editor.toolbar.compile.loading')
-                    : activeBoard?.languageMode === 'micropython'
-                      ? t('editor.toolbar.compile.loadMicropython')
-                      : t('editor.toolbar.compile.compile')
-              }
-            >
-              {compiling ? (
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="spin"
+            <div className={`tb-run-split tb-build-split${targetCount > 1 ? ' tb-split-button' : ''}`} ref={buildMenuRef}>
+              <button
+                onClick={() => {
+                  setBuildMenuOpen(false);
+                  void handleCompile();
+                }}
+                disabled={compiling || compileAllRunning || !activeBoard}
+                className="tb-btn tb-btn-compile"
+                title={
+                  !activeBoard
+                    ? t('editor.toolbar.compile.addBoard')
+                    : compiling
+                      ? t('editor.toolbar.compile.loading')
+                      : activeBoard?.languageMode === 'micropython'
+                        ? t('editor.toolbar.compile.loadMicropython')
+                        : t('editor.toolbar.compile.compile')
+                }
+              >
+                {compiling ? (
+                  <LoaderCircle size={18} className="spin" />
+                ) : (
+                  <Wrench size={18} />
+                )}
+                <span className="tb-action-label">{t('editor.menu.compile', 'Compile')}</span>
+              </button>
+              {targetCount > 1 && (
+                <button
+                  type="button"
+                  className="tb-btn tb-btn-build-caret"
+                  onClick={() => setBuildMenuOpen((open) => !open)}
+                  disabled={compiling || compileAllRunning}
+                  title={t('editor.toolbar.compile.options', 'Compile options')}
+                  aria-label={t('editor.toolbar.compile.options', 'Compile options')}
+                  aria-haspopup="menu"
+                  aria-expanded={buildMenuOpen}
                 >
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-              ) : (
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                </svg>
+                  <ChevronDown size={12} strokeWidth={2.5} aria-hidden />
+                </button>
               )}
-            </button>
+              {targetCount > 1 && buildMenuOpen && (
+                <div className="tb-run-menu dropdown-panel" role="menu" aria-label={t('editor.toolbar.compile.options', 'Compile options')}>
+                  <button type="button" role="menuitem" className="tb-run-menu-item"
+                    disabled={compiling || compileAllRunning}
+                    onClick={() => {
+                      setBuildMenuOpen(false);
+                      handleCompileAll();
+                    }}>
+                    <Layers size={15} className="tb-run-menu-icon" aria-hidden />
+                    <span>
+                      {isMultiBoard ? t('editor.toolbar.compileAll', 'Compile all boards')
+                        : t('editor.toolbar.compileAllTargets', 'Compile all targets')}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
 
             <div className="tb-divider" />
 
@@ -1872,12 +1864,12 @@ export const EditorToolbar = ({
                 boards are one system; running a subset is almost never
                 intended), with a split-menu to still run only the active board.
                 Single-board / board-less behaviour is unchanged. */}
-            <div className="tb-run-split" ref={runMenuRef}>
+            <div className={`tb-run-split${isMultiBoard ? ' tb-split-button' : ''}`} ref={runMenuRef}>
               <button
                 onClick={() => (isMultiBoard ? handleRunAll() : handleRun())}
                 disabled={
                   isBoardless
-                    ? digitalRunning || verifying
+                    ? !hasCircuitParts || digitalRunning || verifying
                     : isMultiBoard
                       ? compileAllRunning || anyBoardRunning || verifying
                       : running || compiling || verifying || !activeBoard
@@ -1887,9 +1879,11 @@ export const EditorToolbar = ({
                   verifying
                     ? t('editor.toolbar.run.verifying', 'Checking circuit...')
                     : isBoardless
-                      ? digitalRunning
-                        ? 'Digital simulation running'
-                        : 'Resume digital simulation'
+                      ? !hasCircuitParts
+                        ? t('editor.toolbar.run.emptyCircuit', 'Add a board or component to run')
+                        : digitalRunning
+                          ? t('editor.toolbar.run.digitalRunning', 'Digital simulation running')
+                          : t('editor.toolbar.run.resumeDigital', 'Resume digital simulation')
                       : isMultiBoard
                         ? t('editor.toolbar.runAll')
                         : !activeBoard
@@ -1900,50 +1894,38 @@ export const EditorToolbar = ({
                 }
               >
                 {verifying || compiling ? (
+                  <LoaderCircle size={18} className="spin" />
+                ) : (
                   <svg
                     width="18"
                     height="18"
-                    viewBox="0 0 24 24"
+                    viewBox="0 0 16 16"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
+                    strokeWidth="1.35"
                     strokeLinejoin="round"
-                    className="spin"
+                    aria-hidden="true"
                   >
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                  </svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                    <polygon points="5,3 19,12 5,21" />
+                    <path d="M4.75 3.4c0-.48.53-.76.93-.5l7.13 4.6a.6.6 0 0 1 0 1l-7.13 4.6c-.4.26-.93-.02-.93-.5Z" />
                   </svg>
                 )}
+                <span className="tb-action-label">{t('editor.menu.run', 'Run')}</span>
               </button>
               {isMultiBoard && (
                 <button
+                  type="button"
                   className="tb-btn tb-btn-run-caret"
                   onClick={() => setRunMenuOpen((o) => !o)}
                   disabled={compileAllRunning || anyBoardRunning || verifying}
                   title={t('editor.toolbar.run.options', 'Run options')}
-                  aria-haspopup="true"
+                  aria-haspopup="menu"
                   aria-expanded={runMenuOpen}
                 >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="6 9 12 15 18 9" />
-                  </svg>
+                  <ChevronDown size={12} strokeWidth={2.5} />
                 </button>
               )}
               {isMultiBoard && runMenuOpen && (
-                <div className="tb-run-menu" role="menu">
+                <div className="tb-run-menu dropdown-panel" role="menu" aria-label={t('editor.toolbar.run.options', 'Run options')}>
                   <button
                     role="menuitem"
                     className="tb-run-menu-item"
@@ -1952,7 +1934,8 @@ export const EditorToolbar = ({
                       handleRunAll();
                     }}
                   >
-                    {t('editor.toolbar.runAll')}
+                    <Layers size={15} className="tb-run-menu-icon" aria-hidden />
+                    <span>{t('editor.toolbar.runAll')}</span>
                   </button>
                   <button
                     role="menuitem"
@@ -1963,10 +1946,13 @@ export const EditorToolbar = ({
                       handleRun();
                     }}
                   >
-                    {t('editor.toolbar.run.runActiveOnly', {
-                      name: activeBoard ? boardDisplayName(activeBoard) : '',
-                      defaultValue: `Run only ${activeBoard ? boardDisplayName(activeBoard) : ''}`,
-                    })}
+                    <CircuitBoard size={15} className="tb-run-menu-icon" aria-hidden />
+                    <span>
+                      {t('editor.toolbar.run.runActiveOnly', {
+                        name: activeBoard ? boardDisplayName(activeBoard) : '',
+                        defaultValue: `Run only ${activeBoard ? boardDisplayName(activeBoard) : ''}`,
+                      })}
+                    </span>
                   </button>
                 </div>
               )}
@@ -1975,7 +1961,7 @@ export const EditorToolbar = ({
             {/* Stop */}
             <button
               onClick={handleStop}
-              disabled={isBoardless ? !digitalRunning : !anyBoardRunning}
+              disabled={!canStop}
               className="tb-btn tb-btn-stop"
               title={isBoardless ? 'Freeze digital simulation' : t('editor.toolbar.stop')}
             >
@@ -2018,6 +2004,27 @@ export const EditorToolbar = ({
               </svg>
             </button>
 
+
+            {targetCount > 1 && !isMultiBoard && (
+              <>
+                <div className="tb-divider" />
+
+                {/* Run All — only when the primary Run isn't already the
+                    "run all boards" action (i.e. board + chip or chips-only
+                    projects). For 2+ boards the split Run button covers it. */}
+                <button
+                  onClick={() => handleRunAll()}
+                  disabled={compileAllRunning || anyBoardRunning || digitalRunning}
+                  className="tb-btn tb-btn-run-all"
+                  title={t('editor.toolbar.runAll')}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <polygon points="3,3 11,12 3,21" />
+                    <polygon points="13,3 21,12 13,21" />
+                  </svg>
+                </button>
+              </>
+            )}
             {/* Flash to real board — one board flashes at the click, several
                 open a picker. The dialog itself (port, compile, progress)
                 is the canvas's FlashModal, reached through the open event. */}
@@ -2058,7 +2065,7 @@ export const EditorToolbar = ({
                   <span className="tb-flash-label">{t('editor.toolbar.flash.label', 'Flash')}</span>
                 </button>
                 {flashTargets.length > 1 && flashMenuOpen && (
-                  <div className="tb-run-menu" role="menu">
+                  <div className="tb-run-menu dropdown-panel" role="menu">
                     <div className="tb-run-menu-title">
                       {t('editor.toolbar.flash.pick', 'Flash which board?')}
                     </div>
@@ -2085,50 +2092,34 @@ export const EditorToolbar = ({
               </div>
             )}
 
-            {targetCount > 1 && (
+            {targetCount > 1 && !isMultiBoard && (
               <>
                 <div className="tb-divider" />
-
-                {/* Compile All — boards + programmable chips */}
-                <button
-                  onClick={handleCompileAll}
-                  disabled={compileAllRunning}
-                  className="tb-btn tb-btn-compile-all"
-                  title={t('editor.toolbar.compileAll')}
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-                    <path d="M6 20h4M14 4l4 4" strokeDasharray="2 2" />
-                  </svg>
-                </button>
 
                 {/* Run All — only when the primary Run isn't already the
                     "run all boards" action (i.e. board + chip or chips-only
                     projects). For 2+ boards the split Run button covers it. */}
-                {!isMultiBoard && (
-                  <button
-                    onClick={() => handleRunAll()}
-                    disabled={compileAllRunning || anyBoardRunning || digitalRunning}
-                    className="tb-btn tb-btn-run-all"
-                    title={t('editor.toolbar.runAll')}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                      <polygon points="3,3 11,12 3,21" />
-                      <polygon points="13,3 21,12 13,21" />
-                    </svg>
-                  </button>
-                )}
+                <button
+                  onClick={() => handleRunAll()}
+                  disabled={compileAllRunning || anyBoardRunning || digitalRunning}
+                  className="tb-btn tb-btn-run-all"
+                  title={t('editor.toolbar.runAll')}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <polygon points="3,3 11,12 3,21" />
+                    <polygon points="13,3 21,12 13,21" />
+                  </svg>
+                </button>
               </>
             )}
+          </div>
+
+          {/* Center slot — a flexible spacer that keeps the right action group
+              pinned to the far right. Rendered unconditionally so the layout
+              holds even when no overlay supplies content here. */}
+          <div className="toolbar-center-slot">{centerSlot}</div>
+
+          <div className="toolbar-group toolbar-group-right">
           </div>
 
           {/* Center slot — a flexible spacer that keeps the right action group
@@ -2156,66 +2147,6 @@ export const EditorToolbar = ({
               onChange={handleFirmwareUpload}
             />
 
-            {/* Library Manager — always visible with label */}
-            <button
-              onClick={() => {
-                trackOpenLibraryManager();
-                setLibManagerOpen(true);
-              }}
-              className="tb-btn-libraries"
-              title={t('editor.toolbar.libraries.title')}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-                <path d="m3.3 7 8.7 5 8.7-5" />
-                <path d="M12 22V12" />
-              </svg>
-              <span className="tb-libraries-label">{t('editor.toolbar.libraries.label')}</span>
-            </button>
-
-            {/* Import / Export moved to the File menu in the header — the
-                hidden input above stays because the File-menu command
-                clicks it through the editorCommands registry. */}
-            {/* Overflow "More" menu — collects the secondary actions
-                (BOM, Schematic image, Upload firmware) so the toolbar no
-                longer overflows on narrow widths.  The two Pro items show
-                a small "PRO" pill in the menu so users know they're
-                premium BEFORE clicking, instead of being surprised by an
-                upgrade prompt. */}
-            {/* The "..." menu is gone: every item it held now lives in the
-                File menu (with PRO pills where they apply). */}
-            <div className="tb-divider" />
-
-            {/* Output Console toggle */}
-            <button
-              onClick={() => setConsoleOpen((v) => !v)}
-              className={`tb-btn tb-btn-output${consoleOpen ? ' tb-btn-output-active' : ''}`}
-              title={t('editor.toolbar.toggleConsole')}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="4 17 10 11 4 5" />
-                <line x1="12" y1="19" x2="20" y2="19" />
-              </svg>
-            </button>
-            <ThemeToggle />
             {rightSlot}
           </div>
         </div>
@@ -2237,20 +2168,7 @@ export const EditorToolbar = ({
       {/* Missing library hint */}
       {missingLibHint && (
         <div className="tb-lib-hint">
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
+          <CircleAlert size={16} />
           <span>{t('editor.toolbar.libHint.message')}</span>
           <button
             className="tb-lib-hint-btn"

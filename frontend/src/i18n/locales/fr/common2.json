@@ -6,7 +6,8 @@
         "addBoard": "Ajouter une carte à compiler",
         "loading": "Chargement…",
         "loadMicropython": "Charger MicroPython",
-        "compile": "Compiler (Ctrl+B)"
+        "compile": "Compiler (Ctrl+B)",
+        "options": "Options de compilation"
       },
       "run": {
         "addBoard": "Ajouter une carte à exécuter",
@@ -55,6 +56,9 @@
         "pick": "Quelle carte flasher ?",
         "active": "active"
       },
+      "connectAgentLabel": "Connecter un agent IA (Claude/Codex)",
+      "compileAllTargets": "Compiler toutes les cibles",
+      "rerunScript": "Relancer le script avec les dernières modifications (sans redémarrage)",
       "dismissError": "Fermer l’erreur"
     },
     "fileExplorer": {
@@ -202,6 +206,8 @@
         "copy": "Copier la carte (Ctrl+C)",
         "paste": "Coller (Ctrl+V)"
       },
+      "selectedBoard": "Carte sélectionnée",
+      "addComponents": "Ajouter des composants",
       "circuitCanvas": "Zone du circuit"
     },
     "componentPicker": {
@@ -281,7 +287,8 @@
       "offsetTitle": "Tension au centre de la ligne. Une valeur saisie ici fixe l'échelle.",
       "couplingTitle": "Couplage : DC montre le signal avec sa polarisation, AC retire la moyenne pour montrer une petite ondulation sur une polarisation",
       "triggerLevel": "Niveau :",
-      "triggerLevelTitle": "Tension que le canal de déclenchement analogique doit franchir. Vide : le milieu de chaque capture."
+      "triggerLevelTitle": "Tension que le canal de déclenchement analogique doit franchir. Vide : le milieu de chaque capture.",
+      "close": "Fermer l’oscilloscope"
     },
     "componentProps": {
       "close": "Fermer",
@@ -490,7 +497,10 @@
       "copy": "Copier",
       "paste": "Coller",
       "find": "Rechercher",
-      "replace": "Remplacer"
+      "replace": "Remplacer",
+      "account": "Compte",
+      "mainMenu": "Menu",
+      "importFromDisk": "Importer depuis le disque…"
     },
     "inspector": {
       "propertiesTab": "Propriétés",
@@ -565,6 +575,43 @@
       "revision": "Revision de la carte reelle",
       "saveToDrive": "Copier sur le lecteur de la carte",
       "savedToDrive": "{{file}} copie sur {{drive}}. La carte redemarre avec votre sketch."
+    },
+    "activity": {
+      "label": "Vues de l’espace de travail",
+      "tools": "Outils de l’espace de travail",
+      "accountTools": "Compte et paramètres",
+      "explorer": "Explorateur",
+      "accountUnavailable": "Les comptes ne sont pas disponibles dans cette version.",
+      "terminal": "Terminal",
+      "serial": "Moniteur série",
+      "scope": "Oscilloscope"
+    },
+    "workspace": {
+      "resizeSidebar": "Redimensionner la barre latérale",
+      "dragOpenSidebar": "Faites glisser pour ouvrir la barre latérale",
+      "status": "État de l’espace de travail",
+      "switchBoard": "Changer de carte",
+      "selectBoard": "Sélectionner une carte"
+    },
+    "compileProgress": {
+      "compiling": "Compilation de {{board}}…",
+      "compilingBoards_one": "Compilation de {{count}} carte…",
+      "compilingBoards_other": "Compilation de {{count}} cartes…",
+      "queued": "En attente d’un créneau de compilation…",
+      "queuedHint": "La compilation est en file d’attente. Elle démarre automatiquement et n’est jamais annulée.",
+      "preparing": "Préparation de la compilation…",
+      "done": "Compilation réussie",
+      "failed": "Échec de la compilation",
+      "serverLoad": "Charge du serveur de compilation",
+      "load": {
+        "low": "Faible",
+        "moderate": "Modérée",
+        "high": "Élevée",
+        "peak": "Très élevée"
+      },
+      "priority": "Compilation prioritaire",
+      "showOutput": "Afficher la sortie",
+      "hide": "Masquer (la compilation continue)"
     }
   },
   "about": {

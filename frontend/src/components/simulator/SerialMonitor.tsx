@@ -4,12 +4,13 @@
  */
 
 import { DropdownSelect } from '../ui/DropdownSelect';
+import { WorkspaceClearButton } from '../editor/WorkspaceClearButton';
 import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { getTabSessionId } from '../../simulation/Esp32Bridge';
 import { openDeviceGateway } from '../../lib/openDeviceGateway';
-import type { BoardKind } from '../../types/board';
 import { boardDisplayName, isPiBoardKind } from '../../types/board';
 import { PiTerminal } from '../raspberry-pi/PiTerminal';
 import { serialMonitorText } from '../../store/serialMonitorText';
@@ -82,7 +83,7 @@ const BOARD_COLOR: Partial<Record<string, string>> = {
   attiny85: 'var(--color-feedback-warning)',
 };
 
-export const SerialMonitor: React.FC = () => {
+export const SerialMonitor: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   const { t } = useTranslation();
   const boards = useSimulatorStore((s) => s.boards);
   const activeBoardId = useSimulatorStore((s) => s.activeBoardId);
@@ -185,12 +186,69 @@ export const SerialMonitor: React.FC = () => {
     }
   };
 
+  const closeLabel = t('editor.serial.close', 'Close Serial Monitor');
+  const closeButton = onClose && (
+    <button
+      type="button"
+      className="workspace-panel-close"
+      aria-label={closeLabel}
+      title={closeLabel}
+      onClick={onClose}
+    >
+      <X size={15} aria-hidden />
+    </button>
+  );
+  const heading = (
+    <div className={onClose ? 'workspace-serial-heading workspace-panel-header--closable' : 'workspace-serial-heading'}>
+      <span className="workspace-panel-title">{t('editor.serial.title')}</span>
+      {activeBoard && (
+        <div style={styles.headerControls}>
+          {isMicroPython && (
+            <span style={{ color: '#ce93d8', fontSize: 11, fontWeight: 600 }}>
+              MicroPython REPL
+            </span>
+          )}
+          {!isMicroPython && activeBoard?.serialLink?.source === 'usb-cdc' && (
+            <span
+              style={styles.baudRate}
+              title="This console is a USB device endpoint, not a UART. As on the real board, the terminal's baud setting is ignored."
+            >
+              USB CDC
+            </span>
+          )}
+          {activeBoard?.serialBaudRate != null &&
+            activeBoard.serialBaudRate > 0 &&
+            activeBoard.serialLink?.source !== 'usb-cdc' &&
+            !isMicroPython && (
+              <span style={styles.baudRate} title={baudLabelTitle(activeBoard.serialLink?.baud ?? activeBoard.serialBaudRate)}>
+                {activeBoard.serialBaudRate.toLocaleString()} baud
+              </span>
+            )}
+          <label style={styles.autoscrollLabel}>
+            <input
+              type="checkbox"
+              checked={autoscroll}
+              onChange={(e) => setAutoscroll(e.target.checked)}
+              style={styles.checkbox}
+            />
+            {t('editor.serial.autoscroll')}
+          </label>
+          <WorkspaceClearButton
+            onClear={() => resolvedTabId && clearBoardSerialOutput(resolvedTabId)}
+            title={t('editor.serial.clearTitle')}
+          />
+          {/* Overlay slot for per-board terminal actions (empty in OSS). */}
+          <span data-velxio-slot="serial-actions" />
+        </div>
+      )}
+      {closeButton}
+    </div>
+  );
+
   if (boards.length === 0) {
     return (
       <div style={styles.container}>
-        <div style={styles.header}>
-          <span style={styles.title}>{t('editor.serial.title')}</span>
-        </div>
+        {heading}
         <pre style={styles.output}>{t('editor.serial.addBoard')}</pre>
       </div>
     );
@@ -198,6 +256,7 @@ export const SerialMonitor: React.FC = () => {
 
   return (
     <div style={styles.container}>
+      {heading}
       {/* Tab strip */}
       <div style={styles.tabStrip}>
         {boards.map((board) => {
@@ -225,51 +284,6 @@ export const SerialMonitor: React.FC = () => {
           );
         })}
 
-        {/* Right-side controls */}
-        <div style={styles.tabControls}>
-          {isMicroPython && (
-            <span style={{ color: '#ce93d8', fontSize: 11, fontWeight: 600 }}>
-              MicroPython REPL
-            </span>
-          )}
-          {!isMicroPython && activeBoard?.serialLink?.source === 'usb-cdc' && (
-            <span
-              style={styles.baudRate}
-              title="This console is a USB device endpoint, not a UART. As on the real board, the terminal's baud setting is ignored."
-            >
-              USB CDC
-            </span>
-          )}
-          {activeBoard?.serialBaudRate != null &&
-            activeBoard.serialBaudRate > 0 &&
-            activeBoard.serialLink?.source !== 'usb-cdc' &&
-            !isMicroPython && (
-              <span
-                style={styles.baudRate}
-                title={baudLabelTitle(activeBoard.serialLink?.baud ?? activeBoard.serialBaudRate)}
-              >
-                {activeBoard.serialBaudRate.toLocaleString()} baud
-              </span>
-            )}
-          <label style={styles.autoscrollLabel}>
-            <input
-              type="checkbox"
-              checked={autoscroll}
-              onChange={(e) => setAutoscroll(e.target.checked)}
-              style={styles.checkbox}
-            />
-            {t('editor.serial.autoscroll')}
-          </label>
-          <button
-            onClick={() => resolvedTabId && clearBoardSerialOutput(resolvedTabId)}
-            style={styles.clearBtn}
-            title={t('editor.serial.clearTitle')}
-          >
-            {t('editor.serial.clear')}
-          </button>
-          {/* Overlay slot for per-board terminal actions (empty in OSS). */}
-          <span data-velxio-slot="serial-actions" />
-        </div>
       </div>
 
       {/* Overlay slot for a full-width notice about the LINK itself — e.g. the
@@ -472,13 +486,12 @@ const styles: Record<string, React.CSSProperties> = {
   tabActive: {
     background: 'rgba(255,255,255,0.04)',
   },
-  tabControls: {
+  headerControls: {
     marginLeft: 'auto',
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    paddingRight: 8,
-    flexShrink: 0,
+    flexWrap: 'wrap',
   },
   unreadDot: {
     width: 6,
@@ -487,11 +500,6 @@ const styles: Record<string, React.CSSProperties> = {
     background: '#4fc3f7',
     flexShrink: 0,
     marginLeft: 3,
-  },
-  title: {
-    color: 'var(--wb-12)',
-    fontWeight: 600,
-    fontSize: 12,
   },
   baudRate: {
     color: 'var(--color-accent-fg)',
@@ -513,15 +521,6 @@ const styles: Record<string, React.CSSProperties> = {
   checkbox: {
     margin: 0,
     cursor: 'pointer',
-  },
-  clearBtn: {
-    background: 'transparent',
-    border: '1px solid var(--wb-8)',
-    color: 'var(--wb-12)',
-    padding: '2px 8px',
-    borderRadius: 3,
-    cursor: 'pointer',
-    fontSize: 11,
   },
   output: {
     flex: 1,
@@ -559,7 +558,8 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'var(--wb-2)',
     border: '1px solid var(--wb-7)',
     color: 'var(--wb-12)',
-    padding: '4px',
+    paddingBlock: '4px',
+    paddingInlineStart: '8px',
     borderRadius: 3,
     fontSize: 11,
     outline: 'none',

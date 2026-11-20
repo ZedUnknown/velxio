@@ -6,7 +6,8 @@
         "addBoard": "Añadir una placa para compilar",
         "loading": "Cargando…",
         "loadMicropython": "Cargar MicroPython",
-        "compile": "Compilar (Ctrl+B)"
+        "compile": "Compilar (Ctrl+B)",
+        "options": "Opciones de compilación"
       },
       "run": {
         "addBoard": "Añadir una placa para ejecutar",
@@ -55,6 +56,9 @@
         "pick": "¿Qué placa grabar?",
         "active": "activa"
       },
+      "connectAgentLabel": "Conectar agente de IA (Claude/Codex)",
+      "compileAllTargets": "Compilar todos los objetivos",
+      "rerunScript": "Volver a ejecutar el script con los últimos cambios (sin reiniciar)",
       "dismissError": "Cerrar error"
     },
     "fileExplorer": {
@@ -202,6 +206,8 @@
         "copy": "Copiar placa (Ctrl+C)",
         "paste": "Pegar (Ctrl+V)"
       },
+      "selectedBoard": "Placa seleccionada",
+      "addComponents": "Añadir componentes",
       "circuitCanvas": "Lienzo del circuito"
     },
     "componentPicker": {
@@ -281,7 +287,8 @@
       "offsetTitle": "Voltios en el centro de la fila. Un valor escrito aquí fija la escala.",
       "couplingTitle": "Acoplamiento: DC muestra la señal con su polarización, AC resta la media para ver un rizado pequeño sobre una polarización",
       "triggerLevel": "Nivel:",
-      "triggerLevelTitle": "Voltios que debe cruzar el canal analógico de disparo. Vacío: el centro de cada captura."
+      "triggerLevelTitle": "Voltios que debe cruzar el canal analógico de disparo. Vacío: el centro de cada captura.",
+      "close": "Cerrar osciloscopio"
     },
     "componentProps": {
       "close": "Cerrar",
@@ -498,7 +505,9 @@
       "copy": "Copiar",
       "paste": "Pegar",
       "find": "Buscar",
-      "replace": "Reemplazar"
+      "replace": "Reemplazar",
+      "mainMenu": "Menú",
+      "importFromDisk": "Importar desde el disco…"
     },
     "inspector": {
       "propertiesTab": "Propiedades",
@@ -573,6 +582,43 @@
       "revision": "Revision de la placa real",
       "saveToDrive": "Copiar a la unidad de la placa",
       "savedToDrive": "{{file}} copiado en {{drive}}. La placa reinicia con tu sketch."
+    },
+    "activity": {
+      "label": "Vistas del espacio de trabajo",
+      "tools": "Herramientas del espacio de trabajo",
+      "accountTools": "Cuenta y configuración",
+      "explorer": "Explorador",
+      "accountUnavailable": "Las cuentas no están disponibles en esta versión.",
+      "terminal": "Terminal",
+      "serial": "Monitor serie",
+      "scope": "Osciloscopio"
+    },
+    "workspace": {
+      "resizeSidebar": "Cambiar el ancho de la barra lateral",
+      "dragOpenSidebar": "Arrastra para abrir la barra lateral",
+      "status": "Estado del espacio de trabajo",
+      "switchBoard": "Cambiar de placa",
+      "selectBoard": "Seleccionar placa"
+    },
+    "compileProgress": {
+      "compiling": "Compilando {{board}}…",
+      "compilingBoards_one": "Compilando {{count}} placa…",
+      "compilingBoards_other": "Compilando {{count}} placas…",
+      "queued": "Esperando un turno de compilación…",
+      "queuedHint": "Tu compilación está en cola. Se iniciará automáticamente y no se cancelará.",
+      "preparing": "Preparando la compilación…",
+      "done": "Compilación correcta",
+      "failed": "Error de compilación",
+      "serverLoad": "Carga del servidor de compilación",
+      "load": {
+        "low": "Baja",
+        "moderate": "Moderada",
+        "high": "Alta",
+        "peak": "Muy alta"
+      },
+      "priority": "Compilación prioritaria",
+      "showOutput": "Mostrar salida",
+      "hide": "Ocultar (la compilación continúa)"
     }
   },
   "about": {

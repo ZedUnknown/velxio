@@ -6,7 +6,8 @@
         "addBoard": "Aggiungi una scheda da compilare",
         "loading": "Caricamento…",
         "loadMicropython": "Carica MicroPython",
-        "compile": "Compila (Ctrl+B)"
+        "compile": "Compila (Ctrl+B)",
+        "options": "Opzioni di compilazione"
       },
       "run": {
         "addBoard": "Aggiungi una scheda da eseguire",
@@ -55,6 +56,9 @@
         "pick": "Quale scheda programmare?",
         "active": "attiva"
       },
+      "connectAgentLabel": "Collega agente IA (Claude/Codex)",
+      "compileAllTargets": "Compila tutte le destinazioni",
+      "rerunScript": "Riesegui lo script con le ultime modifiche (senza riavviare)",
       "dismissError": "Chiudi errore"
     },
     "fileExplorer": {
@@ -202,6 +206,8 @@
         "copy": "Copia scheda (Ctrl+C)",
         "paste": "Incolla (Ctrl+V)"
       },
+      "selectedBoard": "Scheda selezionata",
+      "addComponents": "Aggiungi componenti",
       "circuitCanvas": "Area del circuito"
     },
     "componentPicker": {
@@ -281,7 +287,8 @@
       "offsetTitle": "Tensione al centro della riga. Un valore scritto qui fissa la scala.",
       "couplingTitle": "Accoppiamento: DC mostra il segnale con la sua polarizzazione, AC toglie la media per mostrare un piccolo ripple su una polarizzazione",
       "triggerLevel": "Livello:",
-      "triggerLevelTitle": "Tensione che il canale di trigger analogico deve attraversare. Vuoto: il centro di ogni acquisizione."
+      "triggerLevelTitle": "Tensione che il canale di trigger analogico deve attraversare. Vuoto: il centro di ogni acquisizione.",
+      "close": "Chiudi oscilloscopio"
     },
     "componentProps": {
       "close": "Chiudi",
@@ -490,7 +497,10 @@
       "copy": "Copia",
       "paste": "Incolla",
       "find": "Trova",
-      "replace": "Sostituisci"
+      "replace": "Sostituisci",
+      "account": "Account",
+      "mainMenu": "Menu",
+      "importFromDisk": "Importa dal disco…"
     },
     "inspector": {
       "propertiesTab": "Proprietà",
@@ -565,6 +575,43 @@
       "revision": "Revisione della scheda reale",
       "saveToDrive": "Copia sull'unita della scheda",
       "savedToDrive": "{{file}} copiato su {{drive}}. La scheda si riavvia con il tuo sketch."
+    },
+    "activity": {
+      "label": "Viste dell’area di lavoro",
+      "tools": "Strumenti dell’area di lavoro",
+      "accountTools": "Account e impostazioni",
+      "explorer": "Esplora file",
+      "accountUnavailable": "Gli account non sono disponibili in questa build.",
+      "terminal": "Terminale",
+      "serial": "Monitor seriale",
+      "scope": "Oscilloscopio"
+    },
+    "workspace": {
+      "resizeSidebar": "Ridimensiona la barra laterale",
+      "dragOpenSidebar": "Trascina per aprire la barra laterale",
+      "status": "Stato dell’area di lavoro",
+      "switchBoard": "Cambia scheda",
+      "selectBoard": "Seleziona scheda"
+    },
+    "compileProgress": {
+      "compiling": "Compilazione di {{board}}…",
+      "compilingBoards_one": "Compilazione di {{count}} scheda…",
+      "compilingBoards_other": "Compilazione di {{count}} schede…",
+      "queued": "In attesa di un posto per la compilazione…",
+      "queuedHint": "La compilazione è in coda. Inizia automaticamente e non viene annullata.",
+      "preparing": "Preparazione della compilazione…",
+      "done": "Compilazione riuscita",
+      "failed": "Compilazione non riuscita",
+      "serverLoad": "Carico del server di compilazione",
+      "load": {
+        "low": "Basso",
+        "moderate": "Moderato",
+        "high": "Alto",
+        "peak": "Molto alto"
+      },
+      "priority": "Compilazione prioritaria",
+      "showOutput": "Mostra output",
+      "hide": "Nascondi (la compilazione continua)"
     }
   },
   "about": {

@@ -118,7 +118,7 @@ interface PartInspectorDialogProps {
   componentMetadata: ComponentMetadata;
   componentProperties: Record<string, any>;
   /** Anchor point in VIEWPORT coordinates (both open gestures now agree). */
-  position: { x: number; y: number };
+  position?: { x: number; y: number };
   pinInfo: Array<{ name: string; x: number; y: number; signals?: any[]; description?: string }>;
   onClose: () => void;
   /** Omitted for boards, which do not rotate. */
@@ -411,6 +411,7 @@ export const PartInspectorDialog: React.FC<PartInspectorDialogProps> = ({
   // then grew off the bottom of the screen — the user only saw it corrected
   // when some other event happened to re-render and re-measure it.
   useLayoutEffect(() => {
+    if (!position) return;
     const el = dialogRef.current;
     if (!el) return;
     const place = () => {
@@ -546,11 +547,11 @@ export const PartInspectorDialog: React.FC<PartInspectorDialogProps> = ({
     <div
       ref={dialogRef}
       className="part-inspector-dialog"
-      style={{
+      style={position ? {
         left: `${dialogPos?.x ?? position.x}px`,
         top: `${dialogPos?.y ?? position.y}px`,
         opacity: dialogPos ? 1 : 0,
-      }}
+      } : undefined}
       onClick={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
     >

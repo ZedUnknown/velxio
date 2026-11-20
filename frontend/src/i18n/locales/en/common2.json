@@ -6,7 +6,8 @@
         "addBoard": "Add a board to compile",
         "loading": "Loading…",
         "loadMicropython": "Load MicroPython",
-        "compile": "Compile (Ctrl+B)"
+        "compile": "Compile (Ctrl+B)",
+        "options": "Compile options"
       },
       "run": {
         "addBoard": "Add a board to run",
@@ -55,6 +56,9 @@
         "pick": "Flash which board?",
         "active": "active"
       },
+      "connectAgentLabel": "Connect AI agent (Claude/Codex)",
+      "compileAllTargets": "Compile all targets",
+      "rerunScript": "Re-run script with your latest edits (no reboot)",
       "dismissError": "Dismiss error"
     },
     "fileExplorer": {
@@ -205,6 +209,8 @@
         "copy": "Copy board (Ctrl+C)",
         "paste": "Paste (Ctrl+V)"
       },
+      "selectedBoard": "Selected board",
+      "addComponents": "Add components",
       "circuitCanvas": "Circuit canvas"
     },
     "componentPicker": {
@@ -288,7 +294,8 @@
       "offsetTitle": "Volts at the centre of the row. A value typed here fixes the scale.",
       "couplingTitle": "Coupling: DC shows the signal with its bias, AC takes the mean away to show a small ripple on a bias",
       "triggerLevel": "Level:",
-      "triggerLevelTitle": "Volts the analog trigger channel must cross. Empty: the middle of each capture."
+      "triggerLevelTitle": "Volts the analog trigger channel must cross. Empty: the middle of each capture.",
+      "close": "Close Scope"
     },
     "componentProps": {
       "close": "Close",
@@ -525,7 +532,9 @@
       "copy": "Copy",
       "paste": "Paste",
       "find": "Find",
-      "replace": "Replace"
+      "replace": "Replace",
+      "mainMenu": "Menu",
+      "importFromDisk": "Import from disk…"
     },
     "inspector": {
       "propertiesTab": "Properties",
@@ -600,6 +609,23 @@
       "webHint": "Plug the board in via USB and click the button — your browser will ask which serial port to use. Close any other program using the port (serial monitors, IDEs) first.",
       "compilingHint": "Flashing starts automatically when the build succeeds.",
       "retryCompile": "Recompile & flash"
+    },
+    "activity": {
+      "label": "Workspace views",
+      "tools": "Workspace tools",
+      "accountTools": "Account and settings",
+      "explorer": "Explorer",
+      "accountUnavailable": "Accounts are unavailable in this build.",
+      "terminal": "Terminal",
+      "serial": "Serial Monitor",
+      "scope": "Scope"
+    },
+    "workspace": {
+      "resizeSidebar": "Resize sidebar",
+      "dragOpenSidebar": "Drag to open sidebar",
+      "status": "Workspace status",
+      "switchBoard": "Switch board",
+      "selectBoard": "Select board"
     }
   },
   "about": {

@@ -6,7 +6,8 @@
         "addBoard": "Board zum Kompilieren hinzufügen",
         "loading": "Laden…",
         "loadMicropython": "MicroPython laden",
-        "compile": "Kompilieren (Strg+B)"
+        "compile": "Kompilieren (Strg+B)",
+        "options": "Kompilieroptionen"
       },
       "run": {
         "addBoard": "Board zum Ausführen hinzufügen",
@@ -55,6 +56,9 @@
         "pick": "Welches Board flashen?",
         "active": "aktiv"
       },
+      "connectAgentLabel": "KI-Agent verbinden (Claude/Codex)",
+      "compileAllTargets": "Alle Ziele kompilieren",
+      "rerunScript": "Skript mit den letzten Änderungen erneut ausführen (ohne Neustart)",
       "dismissError": "Fehler schließen"
     },
     "fileExplorer": {
@@ -202,6 +206,8 @@
         "copy": "Board kopieren (Strg+C)",
         "paste": "Einfügen (Strg+V)"
       },
+      "selectedBoard": "Ausgewähltes Board",
+      "addComponents": "Bauteile hinzufügen",
       "circuitCanvas": "Schaltungsfläche"
     },
     "componentPicker": {
@@ -281,7 +287,8 @@
       "offsetTitle": "Spannung in der Mitte der Zeile. Ein hier eingegebener Wert legt die Skala fest.",
       "couplingTitle": "Kopplung: DC zeigt das Signal mit seiner Vorspannung, AC zieht den Mittelwert ab, um eine kleine Welligkeit auf einer Vorspannung zu zeigen",
       "triggerLevel": "Pegel:",
-      "triggerLevelTitle": "Spannung, die der analoge Triggerkanal kreuzen muss. Leer: die Mitte jeder Aufnahme."
+      "triggerLevelTitle": "Spannung, die der analoge Triggerkanal kreuzen muss. Leer: die Mitte jeder Aufnahme.",
+      "close": "Oszilloskop schließen"
     },
     "componentProps": {
       "close": "Schließen",
@@ -490,7 +497,10 @@
       "copy": "Kopieren",
       "paste": "Einfügen",
       "find": "Suchen",
-      "replace": "Ersetzen"
+      "replace": "Ersetzen",
+      "account": "Konto",
+      "mainMenu": "Menü",
+      "importFromDisk": "Von Datenträger importieren…"
     },
     "inspector": {
       "propertiesTab": "Eigenschaften",
@@ -565,6 +575,43 @@
       "revision": "Revision des echten Boards",
       "saveToDrive": "Auf das Laufwerk des Boards kopieren",
       "savedToDrive": "{{file}} nach {{drive}} kopiert. Das Board startet mit deinem Sketch neu."
+    },
+    "activity": {
+      "label": "Arbeitsbereichsansichten",
+      "tools": "Arbeitsbereichswerkzeuge",
+      "accountTools": "Konto und Einstellungen",
+      "explorer": "Explorer",
+      "accountUnavailable": "Konten sind in dieser Version nicht verfügbar.",
+      "terminal": "Terminal",
+      "serial": "Serieller Monitor",
+      "scope": "Oszilloskop"
+    },
+    "workspace": {
+      "resizeSidebar": "Seitenleiste skalieren",
+      "dragOpenSidebar": "Zum Öffnen der Seitenleiste ziehen",
+      "status": "Arbeitsbereichsstatus",
+      "switchBoard": "Board wechseln",
+      "selectBoard": "Board auswählen"
+    },
+    "compileProgress": {
+      "compiling": "{{board}} wird kompiliert…",
+      "compilingBoards_one": "{{count}} Board wird kompiliert…",
+      "compilingBoards_other": "{{count}} Boards werden kompiliert…",
+      "queued": "Warten auf einen Kompilierplatz…",
+      "queuedHint": "Die Kompilierung wartet in der Warteschlange und startet automatisch.",
+      "preparing": "Kompilierung wird vorbereitet…",
+      "done": "Erfolgreich kompiliert",
+      "failed": "Kompilierung fehlgeschlagen",
+      "serverLoad": "Auslastung des Kompilierservers",
+      "load": {
+        "low": "Niedrig",
+        "moderate": "Mittel",
+        "high": "Hoch",
+        "peak": "Sehr hoch"
+      },
+      "priority": "Priorisierte Kompilierung",
+      "showOutput": "Ausgabe anzeigen",
+      "hide": "Ausblenden (Kompilierung läuft weiter)"
     }
   },
   "about": {

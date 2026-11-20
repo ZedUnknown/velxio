@@ -6,7 +6,8 @@
         "addBoard": "添加要编译的板",
         "loading": "加载中…",
         "loadMicropython": "加载 MicroPython",
-        "compile": "编译 (Ctrl+B)"
+        "compile": "编译 (Ctrl+B)",
+        "options": "编译选项"
       },
       "run": {
         "addBoard": "添加要运行的板",
@@ -55,6 +56,9 @@
         "pick": "烧录哪块开发板？",
         "active": "当前"
       },
+      "connectAgentLabel": "连接 AI 代理（Claude/Codex）",
+      "compileAllTargets": "编译所有目标",
+      "rerunScript": "使用最新更改重新运行脚本（无需重启）",
       "dismissError": "关闭错误提示"
     },
     "fileExplorer": {
@@ -202,6 +206,8 @@
         "copy": "复制开发板 (Ctrl+C)",
         "paste": "粘贴 (Ctrl+V)"
       },
+      "selectedBoard": "已选开发板",
+      "addComponents": "添加元件",
       "circuitCanvas": "电路画布"
     },
     "componentPicker": {
@@ -281,7 +287,8 @@
       "offsetTitle": "该行中心的电压。在此输入数值会固定刻度。",
       "couplingTitle": "耦合：DC 显示带偏置的信号，AC 去掉平均值以显示偏置上的小纹波",
       "triggerLevel": "电平:",
-      "triggerLevelTitle": "模拟触发通道必须穿越的电压。留空：每次采集的中间值。"
+      "triggerLevelTitle": "模拟触发通道必须穿越的电压。留空：每次采集的中间值。",
+      "close": "关闭示波器"
     },
     "componentProps": {
       "close": "关闭",
@@ -490,7 +497,10 @@
       "copy": "复制",
       "paste": "粘贴",
       "find": "查找",
-      "replace": "替换"
+      "replace": "替换",
+      "account": "账户",
+      "mainMenu": "菜单",
+      "importFromDisk": "从磁盘导入…"
     },
     "inspector": {
       "propertiesTab": "属性",
@@ -565,6 +575,43 @@
       "revision": "实际开发板版本",
       "saveToDrive": "复制到开发板驱动器",
       "savedToDrive": "已将 {{file}} 复制到 {{drive}}。开发板会重启并运行你的程序。"
+    },
+    "activity": {
+      "label": "工作区视图",
+      "tools": "工作区工具",
+      "accountTools": "账户与设置",
+      "explorer": "资源管理器",
+      "accountUnavailable": "此版本不支持账户功能。",
+      "terminal": "终端",
+      "serial": "串口监视器",
+      "scope": "示波器"
+    },
+    "workspace": {
+      "resizeSidebar": "调整侧栏大小",
+      "dragOpenSidebar": "拖动以打开侧栏",
+      "status": "工作区状态",
+      "switchBoard": "切换开发板",
+      "selectBoard": "选择开发板"
+    },
+    "compileProgress": {
+      "compiling": "正在编译 {{board}}…",
+      "compilingBoards_one": "正在编译 {{count}} 块开发板…",
+      "compilingBoards_other": "正在编译 {{count}} 块开发板…",
+      "queued": "正在等待编译名额…",
+      "queuedHint": "编译任务已排队，将自动开始，不会被取消。",
+      "preparing": "正在准备编译…",
+      "done": "编译成功",
+      "failed": "编译失败",
+      "serverLoad": "编译服务器负载",
+      "load": {
+        "low": "低",
+        "moderate": "中",
+        "high": "高",
+        "peak": "很高"
+      },
+      "priority": "优先编译",
+      "showOutput": "显示输出",
+      "hide": "隐藏（编译继续进行）"
     }
   },
   "about": {

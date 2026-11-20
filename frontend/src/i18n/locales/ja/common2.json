@@ -6,7 +6,8 @@
         "addBoard": "コンパイルするボードを追加",
         "loading": "読み込み中…",
         "loadMicropython": "MicroPythonを読み込む",
-        "compile": "コンパイル (Ctrl+B)"
+        "compile": "コンパイル (Ctrl+B)",
+        "options": "コンパイルオプション"
       },
       "run": {
         "addBoard": "実行するボードを追加",
@@ -55,6 +56,9 @@
         "pick": "どのボードに書き込みますか？",
         "active": "アクティブ"
       },
+      "connectAgentLabel": "AI エージェントを接続 (Claude/Codex)",
+      "compileAllTargets": "すべてのターゲットをコンパイル",
+      "rerunScript": "最新の変更でスクリプトを再実行（再起動なし）",
       "dismissError": "エラーを閉じる"
     },
     "fileExplorer": {
@@ -202,6 +206,8 @@
         "copy": "ボードをコピー (Ctrl+C)",
         "paste": "貼り付け (Ctrl+V)"
       },
+      "selectedBoard": "選択中のボード",
+      "addComponents": "部品を追加",
       "circuitCanvas": "回路キャンバス"
     },
     "componentPicker": {
@@ -281,7 +287,8 @@
       "offsetTitle": "行の中央の電圧。ここに値を入力するとスケールを固定します。",
       "couplingTitle": "結合: DCはバイアスを含めて表示し、ACは平均を除いてバイアス上の小さなリップルを表示します",
       "triggerLevel": "レベル:",
-      "triggerLevelTitle": "アナログトリガーチャンネルが横切る電圧。空欄: 各キャプチャの中央。"
+      "triggerLevelTitle": "アナログトリガーチャンネルが横切る電圧。空欄: 各キャプチャの中央。",
+      "close": "オシロスコープを閉じる"
     },
     "componentProps": {
       "close": "閉じる",
@@ -490,7 +497,10 @@
       "copy": "コピー",
       "paste": "貼り付け",
       "find": "検索",
-      "replace": "置換"
+      "replace": "置換",
+      "account": "アカウント",
+      "mainMenu": "メニュー",
+      "importFromDisk": "ディスクからインポート…"
     },
     "inspector": {
       "propertiesTab": "プロパティ",
@@ -565,6 +575,43 @@
       "revision": "実機のリビジョン",
       "saveToDrive": "ボードのドライブにコピー",
       "savedToDrive": "{{file}} を {{drive}} にコピーしました。ボードはスケッチで再起動します。"
+    },
+    "activity": {
+      "label": "ワークスペースのビュー",
+      "tools": "ワークスペースのツール",
+      "accountTools": "アカウントと設定",
+      "explorer": "エクスプローラー",
+      "accountUnavailable": "このビルドではアカウント機能は利用できません。",
+      "terminal": "ターミナル",
+      "serial": "シリアルモニター",
+      "scope": "オシロスコープ"
+    },
+    "workspace": {
+      "resizeSidebar": "サイドバーの幅を変更",
+      "dragOpenSidebar": "ドラッグしてサイドバーを開く",
+      "status": "ワークスペースの状態",
+      "switchBoard": "ボードを切り替え",
+      "selectBoard": "ボードを選択"
+    },
+    "compileProgress": {
+      "compiling": "{{board}} をコンパイル中…",
+      "compilingBoards_one": "{{count}} 台のボードをコンパイル中…",
+      "compilingBoards_other": "{{count}} 台のボードをコンパイル中…",
+      "queued": "コンパイルの順番待ち…",
+      "queuedHint": "コンパイルは待機中です。順番が来ると自動で開始され、キャンセルされません。",
+      "preparing": "コンパイルを準備中…",
+      "done": "コンパイルに成功しました",
+      "failed": "コンパイルに失敗しました",
+      "serverLoad": "コンパイルサーバーの負荷",
+      "load": {
+        "low": "低い",
+        "moderate": "中程度",
+        "high": "高い",
+        "peak": "非常に高い"
+      },
+      "priority": "優先コンパイル",
+      "showOutput": "出力を表示",
+      "hide": "非表示（コンパイルは継続）"
     }
   },
   "about": {
