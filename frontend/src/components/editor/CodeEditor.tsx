@@ -9,8 +9,7 @@ import { useCompileLogsStore } from '../../store/useCompileLogsStore';
 import { registerRetroAsm } from './retroAsmLanguage';
 import { attachIntellisenseMonaco } from '../../lib/intellisenseRegistry';
 import { CHIP_JSON_SCHEMA, CHIP_JSON_SCHEMA_URI } from './chipJsonSchema';
-import { defineVelxioThemes, monacoThemeFor } from './monacoThemes';
-import { useResolvedTheme } from '../../hooks/useTheme';
+import { defineVelxioThemes, useMonacoTheme } from './monacoThemes';
 import { registerEditorCommand, setEditingPane } from '../../lib/editorCommands';
 import { indentationFor, useEditorPreferences, type EditorPreferences, type Indentation } from '../../store/useEditorPreferences';
 import { EditorStatusBar, type EditorStatus, type IndentationChange } from './EditorStatusBar';
@@ -36,7 +35,7 @@ export const CodeEditor = ({ ref, statusBarHost }: {
     useEditorStore();
   const settings = useEditorPreferences();
   const boards = useSimulatorStore((s) => s.boards);
-  const theme = monacoThemeFor(useResolvedTheme());
+  const theme = useMonacoTheme();
   const activeFile = files.find((f) => f.id === activeFileId);
   const [languagePickerKey, setLanguagePickerKey] = useState<string | null>(null);
   const editorKey = manifestViewBoardId ? `libraries/${manifestViewBoardId}` : `${activeGroupId}/${activeFileId}`;

@@ -14,7 +14,7 @@
 import { DropdownSelect } from '../ui/DropdownSelect';
 import { WorkspaceClearButton } from '../editor/WorkspaceClearButton';
 import React, { useRef, useEffect, useState, useCallback, useLayoutEffect, useMemo } from 'react';
-import { useResolvedTheme } from '../../hooks/useTheme';
+import { useThemeRevision } from '../../hooks/useTheme';
 import ReactDOM from 'react-dom';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -176,7 +176,7 @@ const ChannelCanvas: React.FC<ChannelCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const theme = useResolvedTheme();
+  const theme = useThemeRevision();
   const isAnalog = channel.kind === 'analog';
   const { color, voltsPerDiv, yOffsetV } = channel;
   // What an analog row draws besides its samples: the mean AC coupling takes
@@ -235,7 +235,7 @@ interface RulerCanvasProps {
 const RulerCanvas: React.FC<RulerCanvasProps> = ({ windowEndMs, windowMs, timeDivMs }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
-  const theme = useResolvedTheme();
+  const theme = useThemeRevision();
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
