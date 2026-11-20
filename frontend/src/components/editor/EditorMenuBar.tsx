@@ -220,6 +220,7 @@ export const EditorMenuBar: React.FC<{
   // File Explorer is rendered as a checkmarked row in the View block below.
   const viewItems: Item[] = [
     { kind: 'command', id: 'view.toggleConsole', label: t('editor.menu.toggleConsole', 'Output Console') },
+    { kind: 'command', id: 'view.settings', label: t('editor.settings.title', 'Settings') },
     { kind: 'separator' },
     { kind: 'command', id: 'view.reset', label: t('editor.menu.centerView', 'Center canvas view') },
     { kind: 'command', id: 'view.zoomIn', label: t('editor.canvas.zoomIn', 'Zoom in') },

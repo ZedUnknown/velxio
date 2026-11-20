@@ -267,8 +267,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({ editorMenu, editorToolbar 
           {/* Hidden on the marketing pages, which pin themselves to dark
               (pro DarkSurface) — offering a switch that visibly does nothing
               would be worse than not offering one. */}
-          <ThemeToggle className="header-theme-toggle" />
-          <LanguageSwitcher />
+          {!editorMenu && <ThemeToggle className="header-theme-toggle" />}
+          {!editorMenu && <LanguageSwitcher />}
 
           {/* Share button — visible when a project is loaded */}
           {currentProject && samePath(location.pathname, localize('/editor')) && (

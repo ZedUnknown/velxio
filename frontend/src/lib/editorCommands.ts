@@ -60,6 +60,7 @@ export type EditorCommandId =
   | 'sim.stop'
   | 'sim.resetBoard'
   | 'view.toggleExplorer'
+  | 'view.settings'
   | 'view.toggleConsole'
   | 'view.reset'
   | 'view.zoomIn'

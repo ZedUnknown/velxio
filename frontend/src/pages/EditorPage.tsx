@@ -7,9 +7,10 @@ import { ChevronDown, CircuitBoard, CodeXml, Package, PanelsLeftRight } from 'lu
 import { useTranslation } from 'react-i18next';
 import { startSimulation } from '../simulation/spice/start';
 import { useSEO } from '../utils/useSEO';
-import { CodeEditor } from '../components/editor/CodeEditor';
+import { CodeEditor, type CodeEditorHandle } from '../components/editor/CodeEditor';
 import { EditorToolbar } from '../components/editor/EditorToolbar';
 import { FileExplorer } from '../components/editor/FileExplorer';
+import { EditorSettings } from '../components/editor/EditorSettings';
 import { EditorQuickPick } from '../components/editor/EditorQuickPick';
 import { NewProjectDialog } from '../components/editor/NewProjectDialog';
 import { getLocaleFromPath, localizedPath } from '../i18n/path';
@@ -89,8 +90,11 @@ export const EditorPage: React.FC = () => {
   const explorerWidth = draggedExplorerWidth ?? savedExplorerWidth;
   const updatePreferences = useEditorPreferences((state) => state.update);
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const codeEditorRef = useRef<CodeEditorHandle>(null);
   const [showBoardPicker, setShowBoardPicker] = useState(false);
   const toggleBoardPicker = useCallback(() => setShowBoardPicker((open) => !open), []);
+  const [statusBarHost, setStatusBarHost] = useState<HTMLDivElement | null>(null);
   const [editorWidthPct, setEditorWidthPct] = useState(45);
   // Desktop-only 3-way layout switch (code-only / circuit-only / both).
   // Lets users hide a pane to give the right-docked chat more room.
@@ -441,10 +445,12 @@ export const EditorPage: React.FC = () => {
       if (state.explorerOpen && sidebarView === 'explorer' && codeVisible) setExplorerOpen(false);
       else openWorkspaceView('explorer');
     });
+    const offSettings = registerEditorCommand('view.settings', () => setShowSettings(true));
     return () => {
       offSave();
       offNew();
       offExplorer();
+      offSettings();
     };
   }, [handleSaveClick, handleNewClick, isMobile, mobileView, openWorkspaceView, setExplorerOpen, sidebarView]);
 
@@ -720,9 +726,11 @@ export const EditorPage: React.FC = () => {
       <div className="app-container" ref={containerRef}>
         <WorkspaceActivityBar
           view={explorerOpen && codeVisible ? sidebarView : null}
+          settingsOpen={showSettings}
           openTools={{ terminal: consoleOpen, scope: oscilloscopeOpen, serial: serialMonitorOpen }}
           onSelect={selectWorkspaceView}
           onToggleTool={toggleWorkspaceTool}
+          onSettings={() => setShowSettings(true)}
         />
         {/* ── Editor side ── */}
         <div
@@ -825,7 +833,7 @@ export const EditorPage: React.FC = () => {
               className="editor-wrapper"
               style={{ flex: 1, overflow: 'hidden', minHeight: 0, position: 'relative' }}
             >
-              <CodeEditor />
+              <CodeEditor ref={codeEditorRef} statusBarHost={codeVisible ? statusBarHost : null} />
               {/* The compile card lives over the simulator canvas, which is
                   where the build's result appears. In code-only view (and on
                   a phone showing the editor) that pane is display:none, so it
@@ -935,6 +943,7 @@ export const EditorPage: React.FC = () => {
           <div className="workspace-status-pane workspace-status-pane--editor">
             <WorkspaceToolButton compact tool="terminal" pressed={consoleOpen} onToggle={toggleWorkspaceTool} />
             <div className="workspace-status-controls">
+              <div className="workspace-status-editor" ref={setStatusBarHost} />
             </div>
           </div>
         )}
@@ -993,6 +1002,12 @@ export const EditorPage: React.FC = () => {
               },
             })),
           }]}
+        />
+      )}
+      {showSettings && (
+        <EditorSettings
+          onClose={() => setShowSettings(false)}
+          onIndentationChange={(previous) => codeEditorRef.current?.applyIndentationPreferences(previous)}
         />
       )}
       <NewProjectDialog

@@ -5,6 +5,7 @@ import {
   Files,
   Monitor,
   Search,
+  Settings,
   Terminal,
 } from 'lucide-react';
 import { SearchBar } from '../ui/SearchBar';
@@ -122,14 +123,18 @@ function WorkspaceAccount() {
 
 export function WorkspaceActivityBar({
   view,
+  settingsOpen,
   openTools,
   onSelect,
   onToggleTool,
+  onSettings,
 }: {
   view: WorkspaceView | null;
+  settingsOpen: boolean;
   openTools: Record<WorkspaceTool, boolean>;
   onSelect: (view: WorkspaceView) => void;
   onToggleTool: (tool: WorkspaceTool) => void;
+  onSettings: () => void;
 }) {
   const { t } = useTranslation();
   return (
@@ -165,6 +170,17 @@ export function WorkspaceActivityBar({
         aria-label={t('editor.activity.accountTools', 'Account and settings')}
       >
         <WorkspaceAccount />
+        <button
+          type="button"
+          className="workspace-activity-button workspace-activity-settings"
+          title={t('editor.activity.settings', 'Settings')}
+          aria-label={t('editor.activity.settings', 'Settings')}
+          aria-pressed={settingsOpen}
+          aria-haspopup="dialog"
+          onClick={onSettings}
+        >
+          <Settings size={18} aria-hidden />
+        </button>
       </div>
     </nav>
   );
