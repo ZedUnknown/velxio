@@ -41,6 +41,7 @@ import { trackToggleSerialMonitor } from '../utils/analytics';
 import { clearWorkspaceForStarter } from '../components/editor/NewProjectDialog';
 import { useAutoSaveProject } from '../hooks/useAutoSaveProject';
 import { registerEditorCommand, runEditorCommand } from '../lib/editorCommands';
+import { WorkspaceFlash } from '../components/editor/WorkspaceFlash';
 import { EditorMenuBar } from '../components/editor/EditorMenuBar';
 import '../App.css';
 import '../components/editor/Workspace.css';
@@ -91,6 +92,7 @@ export const EditorPage: React.FC = () => {
   const [showNewProjectDialog, setShowNewProjectDialog] = useState(false);
   const [showBoardPicker, setShowBoardPicker] = useState(false);
   const toggleBoardPicker = useCallback(() => setShowBoardPicker((open) => !open), []);
+  const workspaceVersion = useProjectStore((state) => state.workspaceVersion);
   const [editorWidthPct, setEditorWidthPct] = useState(45);
   // Desktop-only 3-way layout switch (code-only / circuit-only / both).
   // Lets users hide a pane to give the right-docked chat more room.
@@ -349,6 +351,8 @@ export const EditorPage: React.FC = () => {
     if (isMobile) setMobileView('code');
     else if (useEditorStore.getState().viewMode === 'circuit') setViewMode('code');
   }, [isMobile, setExplorerOpen, setViewMode, updatePreferences]);
+  const openFlash = useCallback(() => openWorkspaceView('flash'), [openWorkspaceView]);
+  const openFlashOutput = useCallback(() => setConsoleOpen(true), []);
 
   const selectWorkspaceView = (view: WorkspaceView) => {
     if (view === sidebarView && explorerOpen && codeVisible) setExplorerOpen(false);
@@ -747,6 +751,7 @@ export const EditorPage: React.FC = () => {
             <div className="workspace-explorer-view" hidden={sidebarView !== 'explorer'}>
               <FileExplorer onSaveClick={handleSaveClick} onNewClick={handleNewClick} autoSave={autoSave} />
             </div>
+            <WorkspaceFlash key={workspaceVersion} active={sidebarView === 'flash'} onOpen={openFlash} onShowOutput={openFlashOutput} />
           </aside>
           {!isMobile && (
             <div

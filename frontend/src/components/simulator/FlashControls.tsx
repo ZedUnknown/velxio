@@ -1,48 +1,16 @@
-/**
- * FlashModal — hardware flash UI for a single board on the canvas.
- *
- * Opened from the board context menu's "Flash to real board" item.
- * Walks the user through:
- *   1. Picking a USB serial port (auto-enumerated)
- *   2. Triggering the flash (streams arduino-cli output live)
- *   3. Showing success / error with the option to retry
- *
- * Compile-before-flash: the dialog no longer requires a prior Compile.
- * If the board has no program, or its code changed since the last build
- * (stale fingerprint, see utils/boardCompile.ts), the flash step compiles
- * first — build output streams into the same console — and only flashes on
- * a green build; compiler errors land in the console with an error banner.
- * Web Serial's port picker needs a user gesture, so the web flow asks the
- * overlay to grant the port at the click (preparePort) BEFORE compiling.
- *
- * Two backends:
- *   - Desktop (Tauri): enumerates ports via the sidecar and streams
- *     arduino-cli output over SSE.
- *   - Web: if the pro overlay installed a Web Serial flasher for this
- *     board kind (see `lib/proWebFlash.ts`), the browser's own port
- *     picker replaces the dropdown — the modal opens on a single
- *     "Connect & Flash" button. Without an overlay (pure OSS web
- *     build), it shows the "requires Velxio Desktop" fallback.
- *
- * Plus one route that needs neither: RP2040 / RP2350 boards program from
- * a .uf2 dropped on their BOOTSEL USB drive, so for those the dialog
- * always offers "Download .uf2" (utils/uf2Download.ts), and on a browser
- * without a flasher that download IS the dialog. Families whose
- * bootloader is a separate USB personality also get a "bootloader" panel
- * (hold the button / reboot over USB) fed by the overlay's
- * `bootloaderHint` / `enterBootloader` seam methods.
- */
+/** Hardware upload controls embedded in the workspace sidebar. */
 
 import { DropdownSelect } from '../ui/DropdownSelect';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { BoardInstance } from '../../store/useSimulatorStore';
+import { boardDisplayName, type BoardInstance } from '../../types/board';
+import { useCompileLogsStore } from '../../store/useCompileLogsStore';
+import type { CompilationLog } from '../../utils/compilationLogger';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { isTauri, listSerialPorts, type SerialPortInfo } from '../../desktop/tauriBridge';
-import { streamFlash, type FlashEvent } from '../../services/flashService';
+import { streamFlash } from '../../services/flashService';
 import {
   getWebFlashImpl,
-  webFlashAvailable,
   webFlashMpyAvailable,
   webFlashBootloaderHint,
   webFlashHardwareRevisions,
@@ -51,14 +19,18 @@ import {
   hardwareFlashUpgradeUrl,
   type BootloaderHint,
   type HardwareRevision,
+  type WebFlashRequest,
+  type WebFlashImpl,
 } from '../../lib/proWebFlash';
 import { openExternal } from '../../desktop/tauriBridge';
+import { isFlashPortSelectionCancelled } from '../../lib/flashRequest';
+import { hasSelectedBrowserFlashPort } from '../../lib/browserFlashSerial';
 import { useEditorStore } from '../../store/useEditorStore';
+import { fingerprintSources } from '../../utils/sourceFingerprint';
 import { useProjectStore } from '../../store/useProjectStore';
 import {
   compileBoardForFlash,
   currentSourceFingerprint,
-  isCompiledProgramStale,
 } from '../../utils/boardCompile';
 import {
   canSaveToDrive,
@@ -71,24 +43,28 @@ import {
 interface Props {
   board: BoardInstance;
   fqbn: string;
-  onClose: () => void;
+  hasSelectedPort: boolean;
+  editingOptions: boolean;
+  onBusyChange: (busy: boolean) => void;
+  onShowOutput: () => void;
+  children?: ReactNode;
 }
 
-type ModalState =
+type FlashState =
   | { kind: 'loading-ports' }
-  | { kind: 'picking'; ports: SerialPortInfo[]; selectedPath: string | null }
-  /** `downloaded`: the .uf2 just saved from this dialog (RP2 boards); `drive` = onto the board's drive. */
-  | { kind: 'web-ready'; downloaded?: string; drive?: string }
+  | { kind: 'picking' }
+  /** `downloaded`: the .uf2 just saved from this panel (RP2 boards); `drive` = onto the board's drive. */
+  | { kind: 'web-ready'; downloaded?: string; drive?: string; portSelectionCancelled?: boolean }
+  | { kind: 'choosing-web-port' }
   /** Web, no flasher for this kind, but a .uf2 to hand over (RP2 boards). */
   | { kind: 'download-only'; downloaded?: string; drive?: string }
-  | { kind: 'compiling'; port: string | null; log: string[] }
-  | { kind: 'flashing'; port: string; log: string[]; progress: number }
-  | { kind: 'success'; port: string; elapsedMs: number; log: string[] }
+  | { kind: 'compiling'; port: string | null }
+  | { kind: 'flashing'; port: string; progress: number }
+  | { kind: 'success'; port: string; elapsedMs: number }
   | {
       kind: 'error';
       port: string | null;
       message: string;
-      log: string[];
       stage: 'compile' | 'flash';
       /** The board was not in bootloader mode: show the bootloader panel. */
       notInBootloader?: boolean;
@@ -97,21 +73,59 @@ type ModalState =
 /** Progress of the optional "reboot into bootloader" step. */
 type BootStatus = { phase: 'idle' | 'busy' | 'done' | 'failed'; message?: string };
 
-export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
+function hasCompiledSketch(board: BoardInstance, hash: string) {
+  return !!board.compiledProgram && (!board.compiledSourceHash || board.compiledSourceHash === hash);
+}
+
+export const FlashControls = ({ board: boardProp, fqbn, hasSelectedPort, editingOptions, onBusyChange, onShowOutput, children }: Props) => {
   const { t } = useTranslation();
-  // Read the board LIVE from the store: a compile inside this dialog updates
+  // Read the board LIVE from the store: a compile inside this panel updates
   // compiledProgram / compiledSourceHash and the prop would go stale.
   const board =
     useSimulatorStore((s) => s.boards.find((b) => b.id === boardProp.id)) ?? boardProp;
-  const [state, setState] = useState<ModalState>({ kind: 'loading-ports' });
-  // Keep the latest log in a ref so the flash generator's setState
-  // calls aren't accumulating stale array copies.
-  const logRef = useRef<string[]>([]);
+  const workspaceVersion = useProjectStore((s) => s.workspaceVersion);
+  const [state, setState] = useState<FlashState>({ kind: 'loading-ports' });
+  const boardName = boardDisplayName(board);
+  const writeOutput = useCallback((message: string, type: CompilationLog['type'] = 'info') => {
+    if (useProjectStore.getState().workspaceVersion !== workspaceVersion) return;
+    useCompileLogsStore.getState().appendLogs([{
+      timestamp: new Date(),
+      type,
+      message,
+      source: 'flash',
+      target: { id: board.id, label: boardName, kind: 'board' },
+    }]);
+  }, [board.id, boardName, workspaceVersion]);
+  const isDesktop = isTauri();
+  const [ports, setPorts] = useState<SerialPortInfo[]>([]);
+  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [preparedPort, setPreparedPort] = useState<{ impl: WebFlashImpl; upload: WebFlashImpl['flash'] | void; tracked: boolean } | null>(null);
+  const [bootStatus, setBootStatus] = useState<BootStatus>({ phase: 'idle' });
+  const busy = state.kind === 'choosing-web-port' || state.kind === 'compiling' || state.kind === 'flashing' || bootStatus.phase === 'busy';
+  const runningUpload = state.kind === 'compiling' || state.kind === 'flashing';
+  const resultMessage = state.kind === 'error' ? state.message : state.kind === 'success'
+    ? t('editor.flash.success', { seconds: (state.elapsedMs / 1000).toFixed(1) })
+    : null;
+  const resultType = state.kind === 'error' ? 'error' : 'success';
+  useEffect(() => onBusyChange(busy), [busy, onBusyChange]);
+  useEffect(() => {
+    if (runningUpload) onShowOutput();
+  }, [runningUpload, onShowOutput]);
+  useEffect(() => {
+    if (resultMessage) {
+      writeOutput(resultMessage, resultType);
+      onShowOutput();
+    }
+  }, [resultMessage, resultType, writeOutput, onShowOutput]);
   // Web Serial mode: the pro overlay's flasher handles this board in
   // this browser (the impl is installed before any modal can open).
-  const isWebMode = !isTauri() && webFlashAvailable(board.boardKind);
+  const webImpl = isDesktop ? null : getWebFlashImpl(board.boardKind);
+  const isWebMode = !!webImpl;
   // MicroPython projects use the firmware-install + raw-REPL upload path.
   const isMpy = board.languageMode === 'micropython';
+  const canConnect = !isMpy && !!webImpl?.preparePort;
+  const connectedPort = preparedPort?.impl === webImpl && (!preparedPort.tracked || hasSelectedPort) ? preparedPort : null;
+  const hasConnection = hasSelectedPort || !!connectedPort;
   const mpyWebOk = isMpy && !isTauri() && webFlashMpyAvailable(board.boardKind);
   // RP2040 / RP2350: picotool and the BOOTSEL drive take a .uf2, not the
   // raw .bin the emulator runs, so the flash needs `compiledUf2`.
@@ -127,6 +141,7 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
   const hwFqbn = activeRevision?.fqbn ?? fqbn;
   const isAltRevision = hwFqbn !== fqbn;
   const hwUsesUf2 = fqbnUsesUf2(hwFqbn);
+  const sourceHash = useEditorStore((store) => fingerprintSources(board, store.fileGroups[board.activeFileGroupId] ?? []));
   // The alternate-revision build lives here, not in the store: the emulator
   // must never pick up an RP2040 image for a board it runs as RP2350.
   const altBuildRef = useRef<{ fqbn: string; hash: string; program: string; uf2: string | null } | null>(null);
@@ -141,9 +156,9 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
   const bootloaderHint: BootloaderHint | null = isWebMode
     ? webFlashBootloaderHint(board.boardKind)
     : null;
-  const [bootStatus, setBootStatus] = useState<BootStatus>({ phase: 'idle' });
-  // Abort handle for an in-flight web flash (closing the modal cancels).
+  // Abort handle for an in-flight web flash (the Cancel action stops the upload).
   const abortRef = useRef<AbortController | null>(null);
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   // ── Initial state: enumerate ports (desktop) or arm the web flow ──
   useEffect(() => {
@@ -159,7 +174,6 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
                 kind: 'error',
                 port: null,
                 message: t('editor.flash.needsDesktop'),
-                log: [],
                 stage: 'flash',
               },
       );
@@ -169,11 +183,9 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
     void (async () => {
       const ports = await listSerialPorts();
       if (cancelled) return;
-      setState({
-        kind: 'picking',
-        ports,
-        selectedPath: ports[0]?.path ?? null,
-      });
+      setPorts(ports);
+      setSelectedPath(ports[0]?.path ?? null);
+      setState({ kind: 'picking' });
     })();
     return () => {
       cancelled = true;
@@ -181,74 +193,73 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWebMode]);
 
-  // ── Compile-before-flash ─────────────────────────────────────────
-  // Resolves to the program to flash, compiling first when the board has
-  // none or its sources changed since the last build. Build output goes to
-  // the console; a red build ends in the error state (stage 'compile').
-  const ensureProgram = useCallback(
+  const readyProgram = useCallback((live: BoardInstance, hash: string) => {
+    if (isAltRevision) {
+      const build = altBuildRef.current;
+      return build?.fqbn === hwFqbn && build.hash === hash && (!hwUsesUf2 || build.uf2) ? build.program : null;
+    }
+    if (!hasCompiledSketch(live, hash) || (hwUsesUf2 && !live.compiledUf2)) return null;
+    return live.compiledProgram ?? null;
+  }, [isAltRevision, hwFqbn, hwUsesUf2]);
+  const getReadyProgram = useCallback(() => {
+    const live = useSimulatorStore.getState().boards.find((item) => item.id === board.id);
+    return live ? readyProgram(live, currentSourceFingerprint(live)) : null;
+  }, [board.id, readyProgram]);
+  const needsCompile = !isMpy && !hasCompiledSketch(board, sourceHash);
+
+  const compileProgram = useCallback(
     async (port: string | null): Promise<string | null> => {
-      const live = useSimulatorStore.getState().boards.find((b) => b.id === board.id) ?? board;
-      if (isAltRevision) {
-        // Another chip than the simulator's: a build of its own, reused
-        // while the sources and the revision stay the same.
-        const alt = altBuildRef.current;
-        const hash = currentSourceFingerprint(live);
-        if (alt && alt.fqbn === hwFqbn && alt.hash === hash) return alt.program;
-      } else if (
-        live.compiledProgram &&
-        !isCompiledProgramStale(live) &&
-        (!usesUf2 || live.compiledUf2)
-      ) {
-        // A fresh build is reusable unless this board needs the .uf2 and
-        // the build predates it (older server): then rebuild to get one.
-        return live.compiledProgram;
-      }
-      logRef.current = [];
-      setState({ kind: 'compiling', port, log: [] });
+      const live = useSimulatorStore.getState().boards.find((item) => item.id === board.id);
+      if (!live) return null;
+      const hash = currentSourceFingerprint(live);
+      setState({ kind: 'compiling', port });
       const push = (line: string) => {
-        logRef.current = [...logRef.current, line];
-        setState((prev) => (prev.kind === 'compiling' ? { ...prev, log: logRef.current } : prev));
+        if (!abortRef.current?.signal.aborted) writeOutput(line);
       };
       push(
         isAltRevision
           ? t('editor.flash.log.compilingRevision', { revision: activeRevision?.label ?? hwFqbn })
           : live.compiledProgram
-            ? t('editor.flash.log.recompiling')
-            : t('editor.flash.log.compiling'),
+            ? t('editor.flash.log.rebuildStarted')
+            : t('editor.flash.log.buildStarted'),
       );
       const outcome = await compileBoardForFlash(
         live,
         push,
         isAltRevision ? { fqbn: hwFqbn, record: false } : {},
       );
+      if (abortRef.current?.signal.aborted) return null;
       if (!outcome.ok) {
         setState({
           kind: 'error',
           port,
           message: t('editor.flash.compileFailed', { error: outcome.error }),
-          log: [...logRef.current],
           stage: 'compile',
         });
         return null;
       }
-      push(t('editor.flash.log.compiled', { seconds: (outcome.elapsedMs / 1000).toFixed(1) }));
+      if (hwUsesUf2 && !outcome.uf2) {
+        setState({ kind: 'error', port, message: t('editor.flash.noUf2'), stage: 'compile' });
+        return null;
+      }
+      push(t('editor.flash.log.buildSucceeded', { seconds: (outcome.elapsedMs / 1000).toFixed(1) }));
       if (isAltRevision) {
         altBuildRef.current = {
           fqbn: hwFqbn,
-          hash: currentSourceFingerprint(live),
+          hash,
           program: outcome.program,
           uf2: outcome.uf2,
         };
       }
       return outcome.program;
     },
-    [board, t, usesUf2, isAltRevision, hwFqbn, activeRevision],
+    [board.id, t, isAltRevision, hwFqbn, hwUsesUf2, activeRevision, writeOutput],
   );
 
   /**
    * The bytes real hardware takes: the .uf2 for RP2 boards (null when the
    * build has none), the program itself for everyone else. An alternate
-   * revision's build comes from the dialog's own copy.
+   * revision's build comes from the panel's own copy.
    */
   const hardwareProgram = useCallback(
     (program: string): string | null => {
@@ -264,21 +275,35 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
     [board.id, usesUf2, isAltRevision, hwUsesUf2],
   );
 
-  const refreshPorts = useCallback(async () => {
+  const refreshPorts = useCallback(async (preferredPort?: string | null) => {
     setState({ kind: 'loading-ports' });
     const ports = await listSerialPorts();
-    setState({
-      kind: 'picking',
-      ports,
-      selectedPath: ports[0]?.path ?? null,
-    });
+    setPorts(ports);
+    setSelectedPath(ports.find((port) => port.path === preferredPort)?.path ?? ports[0]?.path ?? null);
+    setState({ kind: 'picking' });
   }, []);
+
+  const returnToSetup = useCallback((port?: string | null) => {
+    setBootStatus({ phase: 'idle' });
+    if (isTauri()) void refreshPorts(port);
+    else setState(isWebMode ? { kind: 'web-ready' } : { kind: 'download-only' });
+  }, [isWebMode, refreshPorts]);
+
+  // The toolbar builds the sketch. A separate hardware revision or a legacy build
+  // without a UF2 can still require an image specifically for the upload.
+  const getUploadProgram = useCallback(async (port: string | null) => {
+    const program = getReadyProgram();
+    if (program || (!isAltRevision && !hwUsesUf2)) return program;
+    const live = useSimulatorStore.getState().boards.find((item) => item.id === board.id);
+    if (!live || !hasCompiledSketch(live, currentSourceFingerprint(live))) return null;
+    return compileProgram(port);
+  }, [getReadyProgram, isAltRevision, hwUsesUf2, board.id, compileProgram]);
 
   // ── Trigger the flash ────────────────────────────────────────────
   const doFlash = useCallback(
     async (port: string) => {
-      const program = await ensureProgram(port);
-      if (!program) return; // compile failed — error state already shown
+      const program = await getUploadProgram(port);
+      if (!program) return;
       // picotool programs RP2 boards from the .uf2; handing it the raw .bin
       // under a .uf2 name is refused ("does not contain a valid RP2
       // executable image"), so a build without one stops here.
@@ -288,13 +313,12 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
           kind: 'error',
           port,
           message: t('editor.flash.noUf2'),
-          log: [...logRef.current],
           stage: 'flash',
         });
         return;
       }
-      // Keep the compile output above the flash output in the console.
-      setState({ kind: 'flashing', port, log: logRef.current, progress: 0 });
+      writeOutput(t('editor.flash.flashingOn', { port }));
+      setState({ kind: 'flashing', port, progress: 0 });
 
       const fmt = formatForFqbn(hwFqbn);
       try {
@@ -311,27 +335,24 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
                 kind: 'success',
                 port,
                 elapsedMs: ev.elapsed_ms,
-                log: [...logRef.current],
               });
             } else {
               setState({
                 kind: 'error',
                 port,
                 message: ev.error,
-                log: [...logRef.current],
                 stage: 'flash',
               });
             }
             return;
           }
           if ('line' in ev) {
-            logRef.current = [...logRef.current, ev.line];
+            writeOutput(ev.line);
           }
           setState((prev) => {
             if (prev.kind !== 'flashing') return prev;
             return {
               ...prev,
-              log: logRef.current,
               progress: ev.phase === 'writing' && ev.progress !== undefined
                 ? ev.progress
                 : prev.progress,
@@ -343,12 +364,11 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
           kind: 'error',
           port,
           message: err instanceof Error ? err.message : String(err),
-          log: [...logRef.current],
           stage: 'flash',
         });
       }
     },
-    [board.id, hwFqbn, ensureProgram, hardwareProgram, t],
+    [board.id, hwFqbn, getUploadProgram, hardwareProgram, t, writeOutput],
   );
 
   // ── Download the .uf2 (RP2 boards; every browser) ────────────────
@@ -356,15 +376,17 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
   // Access API instead of the downloads folder (Chromium only).
   const doDownload = useCallback(
     async (toDrive = false) => {
-      const program = await ensureProgram(null);
-      if (!program) return; // compile failed — error state already shown
+      const program = getReadyProgram();
+      if (!program) {
+        if (await getUploadProgram(null)) returnToSetup();
+        return;
+      }
       const uf2 = hardwareProgram(program);
       if (!uf2) {
         setState({
           kind: 'error',
           port: null,
           message: t('editor.flash.noUf2'),
-          log: [...logRef.current],
           stage: 'flash',
         });
         return;
@@ -387,7 +409,6 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
             kind: 'error',
             port: null,
             message: err instanceof Error ? err.message : String(err),
-            log: [...logRef.current],
             stage: 'flash',
           });
           return;
@@ -403,12 +424,12 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
           : { kind: 'download-only', downloaded: fileName, drive },
       );
     },
-    [board.boardKind, board.name, ensureProgram, hardwareProgram, isWebMode, t],
+    [board.boardKind, board.name, getReadyProgram, getUploadProgram, returnToSetup, hardwareProgram, isWebMode, t],
   );
 
   // ── Reboot into the bootloader (pro overlay backend, RP2 boards) ──
   const doEnterBootloader = useCallback(async () => {
-    const impl = getWebFlashImpl();
+    const impl = getWebFlashImpl(board.boardKind);
     if (!impl?.enterBootloader) return;
     setBootStatus({ phase: 'busy', message: t('editor.flash.bootloader.rebooting') });
     try {
@@ -417,52 +438,59 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
       });
       setBootStatus({ phase: 'done', message: t('editor.flash.bootloader.rebooted') });
     } catch (err) {
+      if (isFlashPortSelectionCancelled(err)) {
+        setBootStatus({ phase: 'idle' });
+        return;
+      }
       const error = err instanceof Error ? err.message : String(err);
       setBootStatus({ phase: 'failed', message: t('editor.flash.bootloader.failed', { error }) });
     }
   }, [board.boardKind, t]);
 
+  const doConnect = async () => {
+    if (!webImpl?.preparePort || busy || editingOptions || abortRef.current) return;
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    const target = { boardId: board.id, workspaceVersion };
+    setState({ kind: 'choosing-web-port' });
+    try {
+      const upload = await webImpl.preparePort(board.boardKind, target, hasConnection);
+      if (ctrl.signal.aborted) return;
+      setPreparedPort({ impl: webImpl, upload, tracked: hasSelectedBrowserFlashPort(target) });
+      setState({ kind: 'web-ready' });
+    } catch (err) {
+      if (ctrl.signal.aborted) return;
+      if (isFlashPortSelectionCancelled(err, true)) {
+        setState({ kind: 'web-ready', portSelectionCancelled: true });
+      } else {
+        setState({ kind: 'error', port: null, message: err instanceof Error ? err.message : String(err), stage: 'flash' });
+      }
+    } finally {
+      abortRef.current = null;
+    }
+  };
+
   // ── Trigger a Web Serial flash (pro overlay backend) ─────────────
   const doWebFlash = useCallback(async () => {
-    const impl = getWebFlashImpl();
-    if (!impl) return;
-    let program: string | null = null;
-    if (!isMpy) {
-      // Grant the port NOW, inside the click's gesture window: the compile
-      // below may take minutes and Web Serial's picker would refuse to
-      // open afterwards. The flasher reuses the grant without prompting.
-      if (impl.preparePort) {
-        try {
-          await impl.preparePort(board.boardKind);
-        } catch (err) {
-          setState({
-            kind: 'error',
-            port: null,
-            message: err instanceof Error ? err.message : String(err),
-            log: [],
-            stage: 'flash',
-            notInBootloader: isNotInBootloaderError(err),
-          });
-          return;
-        }
-      }
-      program = await ensureProgram(null);
-      if (!program) return; // compile failed — error state already shown
-    } else {
-      logRef.current = [];
+    const impl = webImpl;
+    if (!impl || busy || editingOptions || abortRef.current || needsCompile || (canConnect && !hasConnection)) return;
+    let program = isMpy ? null : getReadyProgram();
+    if (!program && !isMpy && !canConnect) {
+      // Uploaders with a built-in chooser need their own click after a hardware build.
+      if (await getUploadProgram(null)) returnToSetup();
+      return;
     }
-    setState({ kind: 'flashing', port: 'Web Serial', log: logRef.current, progress: 0 });
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     const onProgress = (p: { phase: string; pct: number; line?: string }) => {
+      if (ctrl.signal.aborted) return;
       if (p.line) {
-        logRef.current = [...logRef.current, p.line];
+        writeOutput(p.line);
       }
       setState((prev) => {
         if (prev.kind !== 'flashing') return prev;
         return {
           ...prev,
-          log: logRef.current,
           // Seam reports 0-100; the bar renders 0-1 like the SSE path.
           progress:
             p.phase === 'writing' || p.phase === 'uploading'
@@ -472,6 +500,36 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
       });
     };
     try {
+      let preparedFlash = connectedPort?.upload;
+      if (!isMpy) {
+        if (!program) program = await getUploadProgram(null);
+        if (!program || ctrl.signal.aborted) return;
+        const target = { boardId: board.id, workspaceVersion };
+        if (connectedPort?.tracked && !hasSelectedBrowserFlashPort(target)) {
+          returnToSetup();
+          return;
+        }
+        if (canConnect && !connectedPort) {
+          if (!hasSelectedBrowserFlashPort(target)) {
+            returnToSetup();
+            return;
+          }
+          preparedFlash = await impl.preparePort?.(board.boardKind, target);
+          if (ctrl.signal.aborted) return;
+        }
+      }
+      const port = 'Web Serial';
+      writeOutput(t('editor.flash.flashingOn', { port }));
+      setState({ kind: 'flashing', port, progress: 0 });
+      const flashRequest: WebFlashRequest = {
+        boardId: board.id,
+        boardKind: board.boardKind,
+        fqbn: hwFqbn,
+        // AVR boards carry Intel HEX text in the compiled-program field.
+        binaryBase64: (program && hardwareProgram(program)) ?? program ?? '',
+        signal: ctrl.signal,
+        onProgress,
+      };
       const result =
         isMpy && impl.flashMicroPython
           ? await impl.flashMicroPython({
@@ -486,203 +544,171 @@ export const FlashModal = ({ board: boardProp, fqbn, onClose }: Props) => {
               signal: ctrl.signal,
               onProgress,
             })
-          : await impl.flash({
-              boardId: board.id,
-              boardKind: board.boardKind,
-              fqbn: hwFqbn,
-              binaryBase64: (program && hardwareProgram(program)) ?? program ?? '',
-              signal: ctrl.signal,
-              onProgress,
-            });
+          : await (preparedFlash ? preparedFlash(flashRequest) : impl.flash(flashRequest));
+      if (ctrl.signal.aborted) return;
       setState({
         kind: 'success',
         port: result.chipName,
         elapsedMs: result.elapsedMs,
-        log: [...logRef.current],
       });
     } catch (err) {
-      if (ctrl.signal.aborted) return; // user cancelled — modal is closing
+      if (ctrl.signal.aborted) return;
+      if (isFlashPortSelectionCancelled(err)) {
+        setState({ kind: 'web-ready', portSelectionCancelled: true });
+        return;
+      }
       setState({
         kind: 'error',
         port: null,
         message: err instanceof Error ? err.message : String(err),
-        log: [...logRef.current],
         stage: 'flash',
         notInBootloader: isNotInBootloaderError(err),
       });
     } finally {
       abortRef.current = null;
+      if (ctrl.signal.aborted) {
+        setState({ kind: 'web-ready' });
+        writeOutput(t('editor.flash.cancelled', 'Flash cancelled.'), 'warning');
+      }
     }
-  }, [board.id, board.boardKind, board.activeFileGroupId, isMpy, ensureProgram, hardwareProgram, hwFqbn]);
-
-  const handleClose = useCallback(() => {
-    abortRef.current?.abort();
-    onClose();
-  }, [onClose]);
+  }, [webImpl, busy, editingOptions, needsCompile, canConnect, hasConnection, connectedPort, board.id, board.boardKind,
+    board.activeFileGroupId, isMpy, getReadyProgram, getUploadProgram, returnToSetup, hardwareProgram,
+    hwFqbn, workspaceVersion, writeOutput, t]);
 
   // ── Render ──────────────────────────────────────────────────────
-  const boardLabel = board.boardKind;
   // Entitlement (desktop: paid license only — see lib/proWebFlash.ts).
   const flashAllowed = hardwareFlashAllowed();
+  const flashDisabled = busy || editingOptions || needsCompile || (canConnect && !hasConnection) ||
+    (isDesktop && (!selectedPath || state.kind === 'loading-ports')) || (isWebMode && isMpy && !mpyWebOk);
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'var(--color-bg-overlay)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 9600,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <div
-        style={{
-          width: 560,
-          maxWidth: 'calc(100vw - 32px)',
-          maxHeight: 'calc(100vh - 64px)',
-          background: 'var(--wb-5)',
-          color: 'var(--wb-13)',
-          border: '1px solid var(--wb-6)',
-          borderRadius: 8,
-          padding: 20,
-          boxShadow: 'var(--shadow-4)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-          fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-            {t('editor.flash.title', { board: boardLabel })}
-          </h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            style={closeBtnStyle}
-            aria-label={t('editor.flash.close')}
-          >
-            ×
-          </button>
-        </div>
+    <div className="workspace-flash-controls">
+      {!flashAllowed && <PaidGateView />}
 
-        {!flashAllowed && <PaidGateView onClose={handleClose} />}
-
-        {flashAllowed &&
-          revisions &&
-          (state.kind === 'web-ready' ||
-            state.kind === 'download-only' ||
-            state.kind === 'picking') && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--wb-11)' }}>
-              {t('editor.flash.revision')}
-              <DropdownSelect
-                value={revisionId ?? ''}
-                onValueChange={(value) => pickRevision(value)}
-                style={{ ...selectStyle, flex: 1 }}
-              >
-                {revisions.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </DropdownSelect>
-            </label>
-          )}
-
-        {flashAllowed && state.kind === 'loading-ports' && (
-          <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--wb-10)' }}>
-            {t('editor.flash.detectingPorts')}
+      {flashAllowed &&
+        revisions &&
+        (state.kind === 'web-ready' ||
+          state.kind === 'download-only' ||
+          state.kind === 'picking') && (
+          <div className="workspace-flash-field">
+            <span>{t('editor.flash.revision')}</span>
+            <DropdownSelect
+              aria-label={t('editor.flash.revision')}
+              value={revisionId ?? ''}
+              onValueChange={(value) => pickRevision(value)}
+              disabled={editingOptions}
+            >
+              {revisions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.label}
+                </option>
+              ))}
+            </DropdownSelect>
           </div>
         )}
 
-        {flashAllowed && state.kind === 'picking' && (
-          <PickerView
-            board={board}
-            ports={state.ports}
-            selected={state.selectedPath}
-            onSelect={(p) => setState({ ...state, selectedPath: p })}
-            onRefresh={() => void refreshPorts()}
-            onFlash={(p) => void doFlash(p)}
-          />
-        )}
+      {canConnect && hasConnection && flashAllowed && (
+        <p className="workspace-flash-connection" role="status">{t('editor.flash.selectedPortHint')}</p>
+      )}
 
-        {flashAllowed && state.kind === 'web-ready' && (
-          <WebReadyView
-            board={board}
-            mpyWebOk={mpyWebOk}
-            onFlash={() => void doWebFlash()}
-            bootloader={bootloaderHint}
-            bootStatus={bootStatus}
-            onEnterBootloader={() => void doEnterBootloader()}
-            downloaded={state.downloaded}
-            drive={state.drive}
-          />
-        )}
+      {flashAllowed && needsCompile && !busy && (
+        <BuildNotice status={board.compiledProgram ? 'stale' : 'none'} />
+      )}
 
-        {flashAllowed && state.kind === 'download-only' && (
-          <DownloadOnlyView
-            board={board}
-            downloaded={state.downloaded}
-            drive={state.drive}
-            onDownload={() => void doDownload()}
-            onSaveToDrive={canSaveToDrive() ? () => void doDownload(true) : undefined}
-          />
-        )}
+      {flashAllowed && isDesktop && state.kind !== 'loading-ports' && (
+        <PortPicker ports={ports} selected={selectedPath} disabled={busy || editingOptions} onSelect={setSelectedPath} />
+      )}
 
-        {flashAllowed && (state.kind === 'compiling' ||
-          state.kind === 'flashing' ||
+      {flashAllowed && (isWebMode || isDesktop) && (
+        <div className="workspace-flash-actions">
+          {canConnect && (
+            <button type="button" className="workspace-flash-button" disabled={busy || editingOptions} onClick={() => void doConnect()}>
+              {hasConnection ? t('editor.flash.changePort') : t('editor.flash.connect')}
+            </button>
+          )}
+          {isDesktop && (
+            <button type="button" className="workspace-flash-button" disabled={busy || editingOptions || state.kind === 'loading-ports'}
+              onClick={() => void refreshPorts(selectedPath)}>{t('editor.flash.refreshPorts')}</button>
+          )}
+          <button type="button" className="workspace-flash-button workspace-flash-button-primary" disabled={flashDisabled}
+            onClick={() => isWebMode ? void doWebFlash() : selectedPath && void doFlash(selectedPath)}>
+            {isWebMode && !canConnect ? t('editor.flash.connectFlash') : t('editor.flash.flash')}
+          </button>
+        </div>
+      )}
+
+
+      {flashAllowed && state.kind === 'loading-ports' && (
+        <p role="status" className="workspace-flash-connection">
+          {t('editor.flash.detectingPorts')}
+        </p>
+      )}
+
+      {flashAllowed && state.kind === 'choosing-web-port' && (
+        <p role="status">{t('editor.flash.choosingPort', 'Choose a USB port in the browser to continue…')}</p>
+      )}
+
+      {flashAllowed && state.kind === 'web-ready' && (
+        <WebReadyView
+          bootloader={editingOptions ? null : bootloaderHint}
+          bootStatus={bootStatus}
+          onEnterBootloader={() => void doEnterBootloader()}
+          downloaded={state.downloaded}
+          drive={state.drive}
+          portSelectionCancelled={state.portSelectionCancelled}
+        />
+      )}
+
+      {flashAllowed && state.kind === 'download-only' && (
+        <DownloadOnlyView
+          buildReady={!needsCompile}
+          downloaded={state.downloaded}
+          drive={state.drive}
+          onDownload={() => void doDownload()}
+          onSaveToDrive={canSaveToDrive() ? () => void doDownload(true) : undefined}
+        />
+      )}
+
+      {flashAllowed &&
+        hwUsesUf2 &&
+        !needsCompile && !editingOptions && !busy &&
+        !isMpy &&
+        (state.kind === 'web-ready' ||
+          state.kind === 'picking' ||
           state.kind === 'success' ||
           state.kind === 'error') && (
+          <div style={{ fontSize: 12, color: 'var(--wb-9)', lineHeight: 1.5 }}>
+            {t('editor.flash.downloadUf2Hint')}{' '}
+            <button type="button" onClick={() => void doDownload()} style={linkBtnStyle}>
+              {t('editor.flash.downloadUf2')}
+            </button>
+            {canSaveToDrive() && (
+              <>
+                {' '}
+                <button type="button" onClick={() => void doDownload(true)} style={linkBtnStyle}>
+                  {t('editor.flash.saveToDrive')}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+      {children}
+
+      {flashAllowed && (state.kind === 'compiling' ||
+        state.kind === 'flashing' ||
+        state.kind === 'success' ||
+        state.kind === 'error') && (
+        <div className="workspace-flash-footer">
           <ProgressView
             state={state}
-            webMode={isWebMode}
-            onRetry={() =>
-              isWebMode
-                ? void doWebFlash()
-                : state.port && void doFlash(state.port)
-            }
-            onClose={handleClose}
-            onBackToPicker={() =>
-              isWebMode
-                ? setState({ kind: 'web-ready' })
-                : isTauri()
-                  ? void refreshPorts()
-                  : setState({ kind: 'download-only' })
-            }
-            bootloader={state.kind === 'error' && state.notInBootloader ? bootloaderHint : null}
+            onCancel={isWebMode && state.kind === 'flashing' ? () => abortRef.current?.abort() : undefined}
+            bootloader={!editingOptions && state.kind === 'error' && state.notInBootloader ? bootloaderHint : null}
             bootStatus={bootStatus}
             onEnterBootloader={() => void doEnterBootloader()}
           />
-        )}
-
-        {flashAllowed &&
-          hwUsesUf2 &&
-          !isMpy &&
-          (state.kind === 'web-ready' ||
-            state.kind === 'picking' ||
-            state.kind === 'success' ||
-            state.kind === 'error') && (
-            <div style={{ fontSize: 12, color: 'var(--wb-9)', lineHeight: 1.5 }}>
-              {t('editor.flash.downloadUf2Hint')}{' '}
-              <button type="button" onClick={() => void doDownload()} style={linkBtnStyle}>
-                {t('editor.flash.downloadUf2')}
-              </button>
-              {canSaveToDrive() && (
-                <>
-                  {' '}
-                  <button type="button" onClick={() => void doDownload(true)} style={linkBtnStyle}>
-                    {t('editor.flash.saveToDrive')}
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -704,20 +730,20 @@ const BootloaderPanel = ({ hint, status, onEnter }: BootloaderPanelProps) => {
         ? 'var(--color-feedback-success)'
         : 'var(--wb-10)';
   return (
-    <div style={{ ...insetBoxStyle, padding: 12, marginBottom: 12 }}>
-      <div style={{ color: 'var(--wb-12)', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+    <div className="workspace-flash-stack" style={{ ...insetBoxStyle, padding: 10 }}>
+      <strong>
         {t('editor.flash.bootloader.title')}
-      </div>
-      <div style={{ color: 'var(--wb-9)', fontSize: 12, lineHeight: 1.5 }}>
+      </strong>
+      <p className="workspace-flash-connection">
         {hint.manual ?? t('editor.flash.bootloader.manual')}
-      </div>
+      </p>
       {hint.automatic && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
+        <div className="workspace-flash-actions">
           <button
             type="button"
+            className="workspace-flash-button"
             onClick={onEnter}
             disabled={status.phase === 'busy'}
-            style={{ ...secondaryBtnStyle, opacity: status.phase === 'busy' ? 0.6 : 1 }}
           >
             {t('editor.flash.bootloader.automatic')}
           </button>
@@ -733,7 +759,7 @@ const BootloaderPanel = ({ hint, status, onEnter }: BootloaderPanelProps) => {
 // ── Download-only subview (RP2 boards on a browser without a flasher) ──
 
 interface DownloadOnlyProps {
-  board: BoardInstance;
+  buildReady: boolean;
   downloaded?: string;
   /** Drive name when the file went straight onto the BOOTSEL drive. */
   drive?: string;
@@ -742,12 +768,11 @@ interface DownloadOnlyProps {
   onSaveToDrive?: () => void;
 }
 
-const DownloadOnlyView = ({ board, downloaded, drive, onDownload, onSaveToDrive }: DownloadOnlyProps) => {
+const DownloadOnlyView = ({ buildReady, downloaded, drive, onDownload, onSaveToDrive }: DownloadOnlyProps) => {
   const { t } = useTranslation();
-  const status = buildStatusOf(board);
   return (
-    <div>
-      <div style={{ ...insetBoxStyle, padding: 16, marginBottom: 12 }}>
+    <div className="workspace-flash-stack">
+      <div style={{ ...insetBoxStyle, padding: 10 }}>
         <div style={{ color: 'var(--wb-11)', fontSize: 13, marginBottom: 8 }}>
           {t('editor.flash.downloadOnlyIntro')}
         </div>
@@ -764,18 +789,14 @@ const DownloadOnlyView = ({ board, downloaded, drive, onDownload, onSaveToDrive 
         </div>
       )}
 
-      <div style={{ marginBottom: 12 }}>
-        <BuildNotice status={status} />
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div className="workspace-flash-actions">
         {onSaveToDrive && (
-          <button type="button" onClick={onSaveToDrive} style={secondaryBtnStyle}>
+          <button type="button" className="workspace-flash-button" onClick={onSaveToDrive} disabled={!buildReady}>
             {t('editor.flash.saveToDrive')}
           </button>
         )}
-        <button type="button" onClick={onDownload} style={primaryBtnStyle}>
-          {status === 'fresh' ? t('editor.flash.downloadUf2') : t('editor.flash.compileDownload')}
+        <button type="button" className="workspace-flash-button workspace-flash-button-primary" onClick={onDownload} disabled={!buildReady}>
+          {t('editor.flash.downloadUf2')}
         </button>
       </div>
     </div>
@@ -784,7 +805,7 @@ const DownloadOnlyView = ({ board, downloaded, drive, onDownload, onSaveToDrive 
 
 // ── Paid-gate subview (desktop: flashing needs a paid license) ─────
 
-const PaidGateView = ({ onClose }: { onClose: () => void }) => {
+const PaidGateView = () => {
   const { t } = useTranslation();
   const url = hardwareFlashUpgradeUrl();
   const openPlans = () => {
@@ -804,11 +825,8 @@ const PaidGateView = ({ onClose }: { onClose: () => void }) => {
           {t('editor.flash.paidOnlyBody')}
         </div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <button type="button" onClick={onClose} style={secondaryBtnStyle}>
-          {t('editor.flash.close')}
-        </button>
-        <button type="button" onClick={openPlans} style={primaryBtnStyle}>
+      <div className="workspace-flash-actions">
+        <button type="button" className="workspace-flash-button workspace-flash-button-primary" onClick={openPlans}>
           {t('editor.flash.seePlans')}
         </button>
       </div>
@@ -818,170 +836,82 @@ const PaidGateView = ({ onClose }: { onClose: () => void }) => {
 
 // ── Picker subview ──────────────────────────────────────────────────
 
-interface PickerProps {
-  board: BoardInstance;
-  ports: SerialPortInfo[];
-  selected: string | null;
-  onSelect: (path: string) => void;
-  onRefresh: () => void;
-  onFlash: (path: string) => void;
-}
-
-/**
- * Build status for the notices + button label: 'fresh' (flash as is),
- * 'stale' (code changed since the build: warn + rebuild), 'none' (compile
- * first). MicroPython never compiles.
- */
-type BuildStatus = 'fresh' | 'stale' | 'none' | 'mpy';
-
-function buildStatusOf(board: BoardInstance): BuildStatus {
-  if (board.languageMode === 'micropython') return 'mpy';
-  if (!board.compiledProgram) return 'none';
-  return isCompiledProgramStale(board) ? 'stale' : 'fresh';
-}
-
-const BuildNotice = ({ status }: { status: BuildStatus }) => {
+const BuildNotice = ({ status }: { status: 'none' | 'stale' }) => {
   const { t } = useTranslation();
-  if (status === 'fresh' || status === 'mpy') return null;
   return (
-    <div
-      style={{
-        marginTop: 10,
-        padding: 10,
-        background: 'var(--color-feedback-warning-soft)',
-        color: 'var(--color-feedback-warning)',
-        borderRadius: 4,
-        fontSize: 12,
-        lineHeight: 1.45,
-      }}
-    >
-      {status === 'stale' ? t('editor.flash.staleBuild') : t('editor.flash.noBuild')}
+    <div className="workspace-flash-feedback workspace-flash-feedback--warning" role="status">
+      {status === 'stale'
+        ? t('editor.flash.recompileRequired')
+        : t('editor.flash.compileRequired')}
     </div>
   );
 };
 
-const flashButtonLabel = (t: (k: string) => string, status: BuildStatus, web: boolean) => {
-  if (status === 'none' || status === 'stale') {
-    return web ? t('editor.flash.connectCompileFlash') : t('editor.flash.compileFlash');
-  }
-  return web ? t('editor.flash.connectFlash') : t('editor.flash.flash');
-};
-
-const PickerView = ({ board, ports, selected, onSelect, onRefresh, onFlash }: PickerProps) => {
+function PortPicker({ ports, selected, disabled, onSelect }: {
+  ports: SerialPortInfo[];
+  selected: string | null;
+  disabled: boolean;
+  onSelect: (path: string) => void;
+}) {
   const { t } = useTranslation();
-  const status = buildStatusOf(board);
-
   if (ports.length === 0) {
     return (
-      <div>
-        <div style={{ ...insetBoxStyle, padding: 16, marginBottom: 12 }}>
-          <div style={{ color: 'var(--wb-11)', fontSize: 13, marginBottom: 8 }}>
-            {t('editor.flash.noPorts')}
-          </div>
-          <div style={{ color: 'var(--wb-9)', fontSize: 12, lineHeight: 1.5 }}>
-            {t('editor.flash.noPortsHint')}
-            <pre style={{ marginTop: 6, fontSize: 11 }}>
-              sudo usermod -a -G dialout $USER
-            </pre>
-            {t('editor.flash.noPortsHintLogout')}
-          </div>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <button type="button" onClick={onRefresh} style={primaryBtnStyle}>
-            {t('editor.flash.refresh')}
-          </button>
-        </div>
+      <div className="workspace-flash-stack">
+        <p role="status">{t('editor.flash.noPorts')}</p>
+        <p className="workspace-flash-connection">
+          {t('editor.flash.noPortsHint')}{' '}
+          <code>sudo usermod -a -G dialout $USER</code>{' '}
+          {t('editor.flash.noPortsHintLogout')}
+        </p>
       </div>
     );
   }
-
   return (
-    <div>
-      <label style={{ display: 'block', marginBottom: 6, fontSize: 12, color: 'var(--wb-11)' }}>
-        {t('editor.flash.serialPort')}
-      </label>
-      <DropdownSelect
-        value={selected ?? ''}
-        onValueChange={(value) => onSelect(value)}
-        style={selectStyle}
-      >
-        {ports.map((p) => (
-          <option key={p.path} value={p.path}>
-            {portLabel(p)}
-          </option>
-        ))}
+    <div className="workspace-flash-field">
+      <span>{t('editor.flash.serialPort')}</span>
+      <DropdownSelect aria-label={t('editor.flash.serialPort')} value={selected ?? ''} disabled={disabled} onValueChange={onSelect}>
+        {ports.map((port) => <option key={port.path} value={port.path}>{portLabel(port)}</option>)}
       </DropdownSelect>
-
-      <BuildNotice status={status} />
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
-        <button type="button" onClick={onRefresh} style={secondaryBtnStyle}>
-          {t('editor.flash.refreshPorts')}
-        </button>
-        <button
-          type="button"
-          disabled={!selected}
-          onClick={() => selected && onFlash(selected)}
-          style={{ ...primaryBtnStyle, opacity: !selected ? 0.5 : 1 }}
-        >
-          {flashButtonLabel(t, status, false)}
-        </button>
-      </div>
     </div>
   );
-};
+}
 
 // ── Web Serial subview ──────────────────────────────────────────────
 
+function PortNotSelected() {
+  const { t } = useTranslation();
+  return (
+    <p role="status" style={{ color: 'var(--wb-11)', fontSize: 12 }}>
+      {t('editor.flash.portNotSelected', 'No USB port was selected. You can try again when your board is connected.')}
+    </p>
+  );
+}
+
 interface WebReadyProps {
-  board: BoardInstance;
-  /** MicroPython path available (overlay implements firmware+upload). */
-  mpyWebOk: boolean;
-  onFlash: () => void;
   /** Bootloader step for this kind, or null when the family needs none. */
   bootloader: BootloaderHint | null;
   bootStatus: BootStatus;
   onEnterBootloader: () => void;
-  /** File name of a .uf2 saved from this dialog, if any. */
+  /** File name of a .uf2 saved from this panel, if any. */
   downloaded?: string;
   /** Drive name when the file went straight onto the BOOTSEL drive. */
   drive?: string;
+  portSelectionCancelled?: boolean;
 }
 
 const WebReadyView = ({
-  board,
-  mpyWebOk,
-  onFlash,
   bootloader,
   bootStatus,
   onEnterBootloader,
   downloaded,
   drive,
+  portSelectionCancelled,
 }: WebReadyProps) => {
   const { t } = useTranslation();
-  // MicroPython boards carry the 'micropython-loaded' sentinel instead of
-  // a flash image — they flash only via the overlay's MicroPython path
-  // (firmware install + raw-REPL file upload), which needs no compile.
-  const isMpy = board.languageMode === 'micropython';
-  const status = buildStatusOf(board);
-  const canFlash = isMpy ? mpyWebOk : true;
+  if (!portSelectionCancelled && !bootloader && !downloaded) return null;
   return (
-    <div>
-      <div style={{ ...insetBoxStyle, padding: 16, marginBottom: 12 }}>
-        <div style={{ color: 'var(--wb-11)', fontSize: 13, marginBottom: 8 }}>
-          {t('editor.flash.webIntro')}
-        </div>
-        <div style={{ color: 'var(--wb-9)', fontSize: 12, lineHeight: 1.5 }}>
-          {t('editor.flash.webHint')}
-          {isMpy && mpyWebOk && <> {t('editor.flash.mpyTwoSteps')}</>}
-        </div>
-      </div>
-
-      {isMpy && !mpyWebOk && (
-        <div style={{ padding: 10, background: 'var(--color-feedback-warning-soft)', color: 'var(--color-feedback-warning)', borderRadius: 4, fontSize: 12, marginBottom: 12 }}>
-          {t('editor.flash.mpyUnavailable')}
-        </div>
-      )}
+    <div className="workspace-flash-stack">
+      {portSelectionCancelled && <PortNotSelected />}
 
       {bootloader && (
         <BootloaderPanel hint={bootloader} status={bootStatus} onEnter={onEnterBootloader} />
@@ -995,20 +925,6 @@ const WebReadyView = ({
         </div>
       )}
 
-      <div style={{ marginBottom: 12 }}>
-        <BuildNotice status={status} />
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button
-          type="button"
-          disabled={!canFlash}
-          onClick={onFlash}
-          style={{ ...primaryBtnStyle, opacity: canFlash ? 1 : 0.5 }}
-        >
-          {flashButtonLabel(t, status, true)}
-        </button>
-      </div>
     </div>
   );
 };
@@ -1017,15 +933,11 @@ const WebReadyView = ({
 
 interface ProgressProps {
   state:
-    | { kind: 'compiling'; port: string | null; log: string[] }
-    | { kind: 'flashing'; port: string; log: string[]; progress: number }
-    | { kind: 'success'; port: string; elapsedMs: number; log: string[] }
-    | { kind: 'error'; port: string | null; message: string; log: string[]; stage: 'compile' | 'flash' };
-  /** Web Serial backend: closing cancels the flash and there is no port picker. */
-  webMode: boolean;
-  onRetry: () => void;
-  onClose: () => void;
-  onBackToPicker: () => void;
+    | { kind: 'compiling'; port: string | null }
+    | { kind: 'flashing'; port: string; progress: number }
+    | { kind: 'success'; port: string; elapsedMs: number }
+    | { kind: 'error'; port: string | null; message: string; stage: 'compile' | 'flash' };
+  onCancel?: () => void;
   /** Shown under an error when the board was not in bootloader mode. */
   bootloader?: BootloaderHint | null;
   bootStatus?: BootStatus;
@@ -1034,66 +946,49 @@ interface ProgressProps {
 
 const ProgressView = ({
   state,
-  webMode,
-  onRetry,
-  onClose,
-  onBackToPicker,
+  onCancel,
   bootloader,
   bootStatus,
   onEnterBootloader,
 }: ProgressProps) => {
   const { t } = useTranslation();
-  const logRef = useRef<HTMLPreElement | null>(null);
-  const busy = state.kind === 'compiling' || state.kind === 'flashing';
-  // Auto-scroll the log to the bottom as new lines come in.
-  useEffect(() => {
-    if (logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
-    }
-  }, [state.log]);
-
+  const progress = state.kind === 'flashing' ? Math.round(state.progress * 100) : 0;
   return (
-    <div>
+    <div className="workspace-flash-stack">
       {state.kind === 'compiling' && (
         <>
-          <div style={{ fontSize: 13, color: 'var(--wb-12)', marginBottom: 8 }}>
+          <div role="status">
             {t('editor.flash.compiling')}
           </div>
-          <div style={{ height: 6, background: 'var(--wb-3)', borderRadius: 3, overflow: 'hidden', marginBottom: 12 }}>
-            <div className="flash-indeterminate" style={{ height: '100%', width: '35%', background: 'var(--color-action-primary)' }} />
+          <div className="workspace-flash-progress-track" aria-hidden="true">
+            <div className="flash-indeterminate" style={{ width: '35%' }} />
           </div>
         </>
       )}
 
       {state.kind === 'flashing' && (
         <>
-          <div style={{ fontSize: 13, color: 'var(--wb-12)', marginBottom: 8 }}>
+          <div role="status">
             {t('editor.flash.flashingOn', { port: state.port })}
           </div>
-          <div style={{ height: 6, background: 'var(--wb-3)', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
-            <div
-              style={{
-                height: '100%',
-                width: `${Math.round(state.progress * 100)}%`,
-                background: 'var(--color-action-primary)',
-                transition: 'width 0.2s ease',
-              }}
-            />
+          <div className="workspace-flash-progress-track" role="progressbar"
+            aria-label={t('editor.flash.flashingOn', { port: state.port })} aria-valuenow={progress}>
+            <div style={{ width: `${progress}%` }} />
           </div>
-          <div style={{ fontSize: 11, color: 'var(--wb-10)', marginBottom: 12 }}>
-            {Math.round(state.progress * 100)}%
+          <div className="workspace-flash-connection">
+            {progress}%
           </div>
         </>
       )}
 
       {state.kind === 'success' && (
-        <div style={{ padding: 12, background: 'var(--color-feedback-success-soft)', color: 'var(--color-feedback-success)', borderRadius: 4, marginBottom: 12, fontSize: 13 }}>
+        <div role="status" className="workspace-flash-feedback workspace-flash-feedback--success">
           {t('editor.flash.success', { seconds: (state.elapsedMs / 1000).toFixed(1) })}
         </div>
       )}
 
       {state.kind === 'error' && (
-        <div style={{ padding: 12, background: 'var(--color-feedback-error-soft)', color: 'var(--color-feedback-error)', borderRadius: 4, marginBottom: 12, fontSize: 13 }}>
+        <div role="alert" className="workspace-flash-feedback workspace-flash-feedback--error">
           {state.message}
         </div>
       )}
@@ -1102,47 +997,11 @@ const ProgressView = ({
         <BootloaderPanel hint={bootloader} status={bootStatus} onEnter={onEnterBootloader} />
       )}
 
-      <pre
-        ref={logRef}
-        style={{
-          height: 240,
-          margin: 0,
-          padding: 10,
-          background: 'var(--wb-0)',
-          color: 'var(--wb-12)',
-          border: '1px solid var(--wb-6)',
-          borderRadius: 4,
-          fontSize: 11,
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-          overflowY: 'auto',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-all',
-        }}
-      >
-        {state.log.join('\n') || t('editor.flash.noOutput')}
-      </pre>
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12 }}>
-        {state.kind === 'flashing' ? (
-          <span style={{ fontSize: 11, color: 'var(--wb-9)' }}>{t('editor.flash.dontUnplug')}</span>
-        ) : state.kind === 'compiling' ? (
-          <span style={{ fontSize: 11, color: 'var(--wb-9)' }}>{t('editor.flash.compilingHint')}</span>
-        ) : (
-          <button type="button" onClick={onBackToPicker} style={secondaryBtnStyle}>
-            {webMode ? t('editor.flash.startOver') : t('editor.flash.pickAnotherPort')}
-          </button>
-        )}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {state.kind === 'error' && (
-            <button type="button" onClick={onRetry} style={primaryBtnStyle}>
-              {state.stage === 'compile' ? t('editor.flash.retryCompile') : t('editor.flash.retry')}
-            </button>
-          )}
-          <button type="button" onClick={onClose} style={secondaryBtnStyle}>
-            {busy ? (webMode ? t('editor.flash.cancel') : t('editor.flash.hide')) : t('editor.flash.close')}
-          </button>
-        </div>
-      </div>
+      {state.kind === 'flashing' && <p>{t('editor.flash.dontUnplug')}</p>}
+      {state.kind === 'compiling' && <p>{t('editor.flash.terminalBuildHint')}</p>}
+      {onCancel && (
+        <button type="button" className="workspace-flash-button" onClick={onCancel}>{t('editor.flash.cancel')}</button>
+      )}
     </div>
   );
 };
@@ -1192,59 +1051,6 @@ const linkBtnStyle: React.CSSProperties = {
   textDecoration: 'underline',
 };
 
-const closeBtnStyle: React.CSSProperties = {
-  width: 28,
-  height: 28,
-  padding: 0,
-  background: 'transparent',
-  border: '1px solid var(--wb-6)',
-  borderRadius: 4,
-  color: 'var(--wb-11)',
-  fontSize: 18,
-  cursor: 'pointer',
-  lineHeight: 1,
-};
-
-const primaryBtnStyle: React.CSSProperties = {
-  padding: '8px 17px',
-  fontSize: 13,
-  fontWeight: 600,
-  color: 'var(--color-action-primary-fg)',
-  background: 'var(--color-action-primary)',
-  border: 'none',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-};
-
-const secondaryBtnStyle: React.CSSProperties = {
-  padding: '7px 14px',
-  fontSize: 13,
-  color: 'var(--wb-12)',
-  background: 'transparent',
-  border: '1px solid var(--wb-6)',
-  borderRadius: 4,
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-};
-
-const selectStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  background: 'var(--wb-3)',
-  color: 'var(--wb-13)',
-  border: '1px solid var(--wb-6)',
-  borderRadius: 4,
-  fontSize: 13,
-  fontFamily: 'inherit',
-};
-
-/**
- * Bed for the explanatory blocks inside the dialog: one ramp step deeper
- * than the --wb-5 panel, which is a step DOWN in both themes (#252526
- * under #2d2d2d, #eceef1 under white). The hairline keeps the edge from
- * disappearing where the two values sit close.
- */
 const insetBoxStyle: React.CSSProperties = {
   background: 'var(--wb-3)',
   border: '1px solid var(--wb-6)',

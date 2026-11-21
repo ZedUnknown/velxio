@@ -26,6 +26,7 @@ import './BoardOptionsModal.css';
 
 interface BoardOptionsModalProps {
   isOpen: boolean;
+  inline?: boolean;
   boardId: string;
   boardKind: BoardKind;
   /** User-given board name (optional); shown in the subtitle when set. */
@@ -74,6 +75,7 @@ async function readFileAsBase64(file: File): Promise<string> {
 
 export const BoardOptionsModal = ({
   isOpen,
+  inline = false,
   boardId,
   boardName,
   boardKind,
@@ -154,9 +156,9 @@ export const BoardOptionsModal = ({
     onSpiffsChange(spiffsFiles.filter((f) => f.name !== name));
   };
 
-  return (
-    <div className="bom-overlay" onClick={onClose}>
-      <div className="bom-modal" onClick={(e) => e.stopPropagation()}>
+  const content = (
+      <div className={inline ? 'bom-inline' : 'bom-modal'} onClick={inline ? undefined : (e) => e.stopPropagation()}>
+        {!inline && <>
         <div className="bom-header">
           <div className="bom-title">
             <div className="bom-title-main">{t('editor.boardOptions.title')}</div>
@@ -183,6 +185,7 @@ export const BoardOptionsModal = ({
             Filesystem Files ({spiffsFiles.length})
           </button>
         </div>
+        </>}
 
         <div className="bom-body">
           {tab === 'options' ? (
@@ -394,7 +397,7 @@ export const BoardOptionsModal = ({
                 </div>
               </section>
 
-              <section className="bom-section">
+              {!inline && <section className="bom-section">
                 <h4 className="bom-section-title">{t('editor.boardOptions.tools')}</h4>
                 <div className="bom-row">
                   <label className="bom-label">{t('editor.boardOptions.eraseFlash')}</label>
@@ -410,7 +413,7 @@ export const BoardOptionsModal = ({
                     </span>
                   </div>
                 </div>
-              </section>
+              </section>}
             </>
           ) : (
             <SpiffsPanel
@@ -428,16 +431,21 @@ export const BoardOptionsModal = ({
         </div>
 
         <div className="bom-footer">
+          {inline && (
+            <button className="bom-btn bom-btn-secondary" onClick={() => setDraft(getDefaultOptionsForKind(boardKind))}>
+              {t('editor.flash.resetDefaults', 'Reset to defaults')}
+            </button>
+          )}
           <button className="bom-btn bom-btn-secondary" onClick={onClose}>
-            Cancel
+            {t('editor.flash.cancel')}
           </button>
           <button className="bom-btn bom-btn-primary" onClick={handleApply}>
-            Apply
+            {t('editor.settings.applyTheme')}
           </button>
         </div>
       </div>
-    </div>
   );
+  return inline ? content : <div className="bom-overlay" onClick={onClose}>{content}</div>;
 };
 
 interface SpiffsPanelProps {

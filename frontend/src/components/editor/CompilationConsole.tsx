@@ -87,7 +87,9 @@ export const CompilationConsole: React.FC<CompilationConsoleProps> = React.memo(
     if (logs.length === prevLogsLenRef.current) return;
     const newLogs = logs.slice(prevLogsLenRef.current);
     prevLogsLenRef.current = logs.length;
-    if (newLogs.some((log) => log.type === 'error')) {
+    if (newLogs.some((log) => log.source === 'flash')) {
+      setFilter('all');
+    } else if (newLogs.some((log) => log.type === 'error')) {
       setFilter('errors');
     }
   }, [logs]);
