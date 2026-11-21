@@ -89,7 +89,7 @@ import type { ComponentMetadata } from '../../types/component-metadata';
 import type { BoardKind, BoardInstance } from '../../types/board';
 import { BOARD_KIND_FQBN, boardDisplayName } from '../../types/board';
 import { blockedByBoardGate } from '../../lib/proBoardGate';
-import { FlashModal } from './FlashModal';
+import { FlashModal } from './FlashControls';
 import { isTauri as isTauriRuntimeFn } from '../../desktop/tauriBridge';
 import {
   OPEN_FLASH_EVENT,
