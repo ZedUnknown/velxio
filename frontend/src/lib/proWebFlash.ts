@@ -6,7 +6,7 @@
  * OSS->Pro seams (`proBoardGate.ts`, `proSaveAction.ts`, `proRoutes.ts`):
  * the OSS app defines a stable interface, the overlay plugs in.
  *
- *   - OSS and overlay builds share the same browser upload interface.
+ *   - OSS web builds include the Arduino Uno Web Serial uploader.
  *   - With the pro overlay   -> installWebFlashImpl() provides the real
  *     flasher; the "Flash to real board" menu item appears in supported
  *     browsers for supported board kinds.
@@ -14,6 +14,7 @@
  * The seam speaks plain data only (base64 program, progress callbacks) —
  * OSS must never see esptool-js types.
  */
+import { arduinoUnoWebFlash } from './arduinoUnoWebFlash';
 import type { BrowserFlashTarget } from './browserFlashSerial';
 
 export interface WebFlashProgress {
@@ -187,6 +188,7 @@ export function onWebFlashImplChange(fn: () => void): () => void {
 /** With no board kind, returns the registered overlay as before. */
 export function getWebFlashImpl(boardKind?: string): WebFlashImpl | null {
   if (boardKind === undefined) return _impl;
+  if (arduinoUnoWebFlash.available(boardKind)) return arduinoUnoWebFlash;
   if (!_impl) return null;
   try {
     return _impl.available(boardKind) ? _impl : null;

@@ -1,13 +1,15 @@
 /** Hardware upload controls embedded in the workspace sidebar. */
 
 import { DropdownSelect } from '../ui/DropdownSelect';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Usb } from 'lucide-react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { boardDisplayName, type BoardInstance } from '../../types/board';
 import { useCompileLogsStore } from '../../store/useCompileLogsStore';
 import type { CompilationLog } from '../../utils/compilationLogger';
 import { useSimulatorStore } from '../../store/useSimulatorStore';
 import { isTauri, listSerialPorts, type SerialPortInfo } from '../../desktop/tauriBridge';
+import { UNO_UPLOAD_BAUD_RATE, UNO_UPLOAD_BAUD_RATES } from '../../lib/arduinoUnoWebFlash';
 import { streamFlash } from '../../services/flashService';
 import {
   getWebFlashImpl,
@@ -83,6 +85,8 @@ export const FlashControls = ({ board: boardProp, fqbn, hasSelectedPort, editing
   // compiledProgram / compiledSourceHash and the prop would go stale.
   const board =
     useSimulatorStore((s) => s.boards.find((b) => b.id === boardProp.id)) ?? boardProp;
+  const [baudRate, setBaudRate] = useState(UNO_UPLOAD_BAUD_RATE);
+  const baudRateId = useId();
   const workspaceVersion = useProjectStore((s) => s.workspaceVersion);
   const [state, setState] = useState<FlashState>({ kind: 'loading-ports' });
   const boardName = boardDisplayName(board);
@@ -527,6 +531,7 @@ export const FlashControls = ({ board: boardProp, fqbn, hasSelectedPort, editing
         fqbn: hwFqbn,
         // AVR boards carry Intel HEX text in the compiled-program field.
         binaryBase64: (program && hardwareProgram(program)) ?? program ?? '',
+        ...(board.boardKind === 'arduino-uno' ? { baudRate } : {}),
         signal: ctrl.signal,
         onProgress,
       };
@@ -572,7 +577,7 @@ export const FlashControls = ({ board: boardProp, fqbn, hasSelectedPort, editing
       }
     }
   }, [webImpl, busy, editingOptions, needsCompile, canConnect, hasConnection, connectedPort, board.id, board.boardKind,
-    board.activeFileGroupId, isMpy, getReadyProgram, getUploadProgram, returnToSetup, hardwareProgram,
+    board.activeFileGroupId, isMpy, getReadyProgram, getUploadProgram, returnToSetup, baudRate, hardwareProgram,
     hwFqbn, workspaceVersion, writeOutput, t]);
 
   // ── Render ──────────────────────────────────────────────────────
@@ -581,8 +586,16 @@ export const FlashControls = ({ board: boardProp, fqbn, hasSelectedPort, editing
   const flashDisabled = busy || editingOptions || needsCompile || (canConnect && !hasConnection) ||
     (isDesktop && (!selectedPath || state.kind === 'loading-ports')) || (isWebMode && isMpy && !mpyWebOk);
 
+  const unoWeb = flashAllowed && isWebMode && board.boardKind === 'arduino-uno';
+
   return (
     <div className="workspace-flash-controls">
+      {unoWeb && (
+        <p className="workspace-flash-transport">
+          <Usb size={14} aria-hidden="true" />
+          <span>{t('editor.flash.unoTransport', 'USB Serial · STK500v1 · {{baud}} baud', { baud: baudRate })}</span>
+        </p>
+      )}
       {!flashAllowed && <PaidGateView />}
 
       {flashAllowed &&
@@ -637,6 +650,29 @@ export const FlashControls = ({ board: boardProp, fqbn, hasSelectedPort, editing
         </div>
       )}
 
+      {unoWeb && (
+        <details className="workspace-flash-advanced">
+          <summary>{t('editor.flash.advancedOptions')}</summary>
+          <div className="workspace-flash-advanced-fields">
+            <dl>
+              <dt>{t('editor.flash.uploadProtocol')}</dt><dd>STK500v1</dd>
+            </dl>
+            <div className="workspace-flash-field">
+              <span id={baudRateId}>{t('editor.flash.uploadBaudRate')}</span>
+              <DropdownSelect aria-labelledby={baudRateId} value={baudRate} disabled={busy}
+                onValueChange={(value) => setBaudRate(Number(value))}>
+                {UNO_UPLOAD_BAUD_RATES.map((rate) => (
+                  <option key={rate} value={rate}>{t('editor.flash.baudRate', { baud: rate })}</option>
+                ))}
+              </DropdownSelect>
+            </div>
+            <button type="button" className="workspace-flash-button" disabled={busy || baudRate === UNO_UPLOAD_BAUD_RATE}
+              onClick={() => setBaudRate(UNO_UPLOAD_BAUD_RATE)}>
+              {t('editor.flash.resetDefaults')}
+            </button>
+          </div>
+        </details>
+      )}
 
       {flashAllowed && state.kind === 'loading-ports' && (
         <p role="status" className="workspace-flash-connection">

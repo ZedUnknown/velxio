@@ -2,7 +2,7 @@
  * Editor Page — main editor + simulator with resizable panels
  */
 
-import React, { useRef, useState, useCallback, useEffect, useLayoutEffect } from 'react';
+import React, { useRef, useState, useSyncExternalStore, useCallback, useEffect, useLayoutEffect } from 'react';
 import { ChevronDown, CircuitBoard, CodeXml, Package, PanelsLeftRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { startSimulation } from '../simulation/spice/start';
@@ -42,6 +42,7 @@ import { clearWorkspaceForStarter } from '../components/editor/NewProjectDialog'
 import { useAutoSaveProject } from '../hooks/useAutoSaveProject';
 import { registerEditorCommand, runEditorCommand } from '../lib/editorCommands';
 import { WorkspaceFlash } from '../components/editor/WorkspaceFlash';
+import { getBrowserFlashSelection, subscribeBrowserFlashSelection } from '../lib/browserFlashSerial';
 import { EditorMenuBar } from '../components/editor/EditorMenuBar';
 import '../App.css';
 import '../components/editor/Workspace.css';
@@ -353,6 +354,12 @@ export const EditorPage: React.FC = () => {
   }, [isMobile, setExplorerOpen, setViewMode, updatePreferences]);
   const openFlash = useCallback(() => openWorkspaceView('flash'), [openWorkspaceView]);
   const openFlashOutput = useCallback(() => setConsoleOpen(true), []);
+  const flashPort = useSyncExternalStore(subscribeBrowserFlashSelection, getBrowserFlashSelection, () => null);
+  const flashBoardName = useSimulatorStore((s) => {
+    if (!flashPort || flashPort.workspaceVersion !== workspaceVersion || flashPort.port.connected === false) return undefined;
+    const board = s.boards.find((item) => item.id === flashPort.boardId);
+    return board ? boardDisplayName(board) : undefined;
+  });
 
   const selectWorkspaceView = (view: WorkspaceView) => {
     if (view === sidebarView && explorerOpen && codeVisible) setExplorerOpen(false);
@@ -715,6 +722,7 @@ export const EditorPage: React.FC = () => {
           view={explorerOpen && codeVisible ? sidebarView : null}
           openTools={{ terminal: consoleOpen, scope: oscilloscopeOpen, serial: serialMonitorOpen }}
           onSelect={selectWorkspaceView}
+          flashBoardName={flashBoardName}
           onToggleTool={toggleWorkspaceTool}
         />
         {/* ── Editor side ── */}
