@@ -1,12 +1,17 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useId, useRef, useState } from 'react';
 import {
   Activity,
   CircleUser,
   Files,
   Monitor,
+  Search,
   Terminal,
 } from 'lucide-react';
+import { SearchBar } from '../ui/SearchBar';
 import { useTranslation } from 'react-i18next';
+import { chipFileGroupId, useEditorStore, type WorkspaceFile } from '../../store/useEditorStore';
+import { useSimulatorStore } from '../../store/useSimulatorStore';
+import { boardDisplayName } from '../../types/board';
 import type { EditorPreferences } from '../../store/useEditorPreferences';
 import { EditorAccountMenuItems } from './EditorAccountMenuItems';
 
@@ -14,6 +19,7 @@ export type WorkspaceView = EditorPreferences['sidebarView'];
 
 const activities = [
   { id: 'explorer', label: 'Explorer', Icon: Files },
+  { id: 'search', label: 'Search', Icon: Search },
 ] as const;
 
 const tools = [
@@ -161,5 +167,122 @@ export function WorkspaceActivityBar({
         <WorkspaceAccount />
       </div>
     </nav>
+  );
+}
+
+interface SearchMatch {
+  groupId: string;
+  file: WorkspaceFile;
+  line?: { lineNumber: number; column: number; text: string };
+}
+
+function findMatches(
+  groups: Record<string, WorkspaceFile[]>,
+  query: string,
+  contents: boolean,
+): { matches: SearchMatch[]; truncated: boolean } {
+  const matches: SearchMatch[] = [];
+  for (const [groupId, files] of Object.entries(groups)) {
+    for (const file of files) {
+      if (!contents) {
+        if (file.name.toLocaleLowerCase().includes(query)) matches.push({ groupId, file });
+      } else {
+        const lines = file.content.split(/\r?\n/);
+        for (const [index, text] of lines.entries()) {
+          const column = text.toLocaleLowerCase().indexOf(query) + 1;
+          if (column)
+            matches.push({ groupId, file, line: { lineNumber: index + 1, column, text } });
+          if (matches.length >= 100) return { matches, truncated: true };
+        }
+      }
+      if (matches.length >= 100) return { matches, truncated: true };
+    }
+  }
+  return { matches, truncated: false };
+}
+
+export function WorkspaceSearch({ onOpen }: { onOpen: () => void }) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState('');
+  const [contents, setContents] = useState(true);
+  const searchMode = useId();
+  const deferred = useDeferredValue(query.trim().toLocaleLowerCase());
+  const groups = useEditorStore((state) => state.fileGroups);
+  const boards = useSimulatorStore((state) => state.boards);
+  const chips = useSimulatorStore((state) => state.components);
+  const { matches, truncated } = deferred
+    ? findMatches(groups, deferred, contents)
+    : { matches: [], truncated: false };
+
+  const open = ({ groupId, file, line }: SearchMatch) => {
+    const board = useSimulatorStore
+      .getState()
+      .boards.find((item) => item.activeFileGroupId === groupId);
+    if (board) useSimulatorStore.getState().setActiveBoardId(board.id);
+    const editor = useEditorStore.getState();
+    editor.setActiveGroup(groupId);
+    editor.openFile(file.id);
+    editor.setRevealLocation({
+      groupId,
+      fileId: file.id,
+      position: line ?? { lineNumber: 1, column: 1 },
+    });
+    onOpen();
+  };
+
+  return (
+    <section className="workspace-sidebar-view" aria-label={t('editor.activity.search', 'Search')}>
+      <header className="workspace-sidebar-header">
+        <h2 className="workspace-sidebar-title">{t('editor.activity.search', 'Search')}</h2>
+      </header>
+      <SearchBar
+        className="workspace-search"
+        placeholder={t('editor.search.query', 'Search workspace')}
+        value={query}
+        onValueChange={setQuery}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && matches[0]) open(matches[0]);
+        }}
+      />
+      <div className="workspace-search-modes" role="radiogroup" aria-label={t('editor.search.mode', 'Search mode')}>
+        <label>
+          <input type="radio" name={searchMode} checked={contents} onChange={() => setContents(true)} />
+          {t('editor.search.fileContents', 'File contents')}
+        </label>
+        <label>
+          <input type="radio" name={searchMode} checked={!contents} onChange={() => setContents(false)} />
+          {t('editor.search.fileNames', 'File names')}
+        </label>
+      </div>
+      {deferred && matches.length === 0 && (
+        <p role="status">{t('editor.search.noResults', 'No matches.')}</p>
+      )}
+      {matches.map((match) => {
+        const { groupId, file, line } = match;
+        const board = boards.find((item) => item.activeFileGroupId === groupId);
+        const chip = chips.find(
+          (item) => item.metadataId === 'custom-chip' && groupId === chipFileGroupId(item.id),
+        );
+        const group = board
+          ? boardDisplayName(board)
+          : String(chip?.properties.name || t('editor.activity.explorer', 'Explorer'));
+        return (
+          <button
+            type="button"
+            className="workspace-search-result"
+            key={`${groupId}/${file.id}/${line?.lineNumber ?? 0}`}
+            title={`${group} / ${file.name}`}
+            onClick={() => open(match)}
+          >
+            <strong>
+              {file.name}
+              {line && `:${line.lineNumber}`}
+            </strong>
+            <span>{line ? line.text.trim() : group}</span>
+          </button>
+        );
+      })}
+      {truncated && <p>{t('editor.search.truncated', 'Showing the first 100 matches.')}</p>}
+    </section>
   );
 }

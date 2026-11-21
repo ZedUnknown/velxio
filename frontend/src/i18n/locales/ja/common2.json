@@ -91,7 +91,10 @@
       },
       "contextMenu": {
         "rename": "名前変更",
-        "delete": "削除"
+        "delete": "削除",
+        "cut": "切り取り",
+        "copy": "コピー",
+        "paste": "貼り付け"
       },
       "lastSaved": "最終保存",
       "saving": "保存中…",
@@ -580,6 +583,7 @@
       "label": "ワークスペースのビュー",
       "tools": "ワークスペースのツール",
       "accountTools": "アカウントと設定",
+      "search": "検索",
       "explorer": "エクスプローラー",
       "accountUnavailable": "このビルドではアカウント機能は利用できません。",
       "terminal": "ターミナル",
@@ -592,6 +596,14 @@
       "status": "ワークスペースの状態",
       "switchBoard": "ボードを切り替え",
       "selectBoard": "ボードを選択"
+    },
+    "search": {
+      "query": "ワークスペースを検索",
+      "mode": "検索モード",
+      "fileContents": "ファイルの内容",
+      "fileNames": "ファイル名",
+      "noResults": "一致する項目はありません。",
+      "truncated": "最初の 100 件を表示しています。"
     },
     "compileProgress": {
       "compiling": "{{board}} をコンパイル中…",

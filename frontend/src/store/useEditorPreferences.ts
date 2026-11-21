@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 const preferences = z.object({
   sidebarWidth: z.number().int().min(100).max(500),
-  sidebarView: z.enum(['explorer']),
+  sidebarView: z.enum(['explorer', 'search']),
 });
 
 export type EditorPreferences = z.infer<typeof preferences>;

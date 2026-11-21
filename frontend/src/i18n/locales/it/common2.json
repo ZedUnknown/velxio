@@ -91,7 +91,10 @@
       },
       "contextMenu": {
         "rename": "Rinomina",
-        "delete": "Elimina"
+        "delete": "Elimina",
+        "cut": "Taglia",
+        "copy": "Copia",
+        "paste": "Incolla"
       },
       "lastSaved": "ultimo salvataggio",
       "saving": "salvataggio…",
@@ -580,6 +583,7 @@
       "label": "Viste dell’area di lavoro",
       "tools": "Strumenti dell’area di lavoro",
       "accountTools": "Account e impostazioni",
+      "search": "Cerca",
       "explorer": "Esplora file",
       "accountUnavailable": "Gli account non sono disponibili in questa build.",
       "terminal": "Terminale",
@@ -592,6 +596,14 @@
       "status": "Stato dell’area di lavoro",
       "switchBoard": "Cambia scheda",
       "selectBoard": "Seleziona scheda"
+    },
+    "search": {
+      "query": "Cerca nell’area di lavoro",
+      "mode": "Modalità di ricerca",
+      "fileContents": "Contenuto dei file",
+      "fileNames": "Nomi dei file",
+      "noResults": "Nessuna corrispondenza.",
+      "truncated": "Sono mostrati i primi 100 risultati."
     },
     "compileProgress": {
       "compiling": "Compilazione di {{board}}…",

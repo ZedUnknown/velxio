@@ -91,7 +91,10 @@
       },
       "contextMenu": {
         "rename": "Umbenennen",
-        "delete": "Löschen"
+        "delete": "Löschen",
+        "cut": "Ausschneiden",
+        "copy": "Kopieren",
+        "paste": "Einfügen"
       },
       "lastSaved": "zuletzt gespeichert",
       "saving": "wird gespeichert…",
@@ -580,6 +583,7 @@
       "label": "Arbeitsbereichsansichten",
       "tools": "Arbeitsbereichswerkzeuge",
       "accountTools": "Konto und Einstellungen",
+      "search": "Suche",
       "explorer": "Explorer",
       "accountUnavailable": "Konten sind in dieser Version nicht verfügbar.",
       "terminal": "Terminal",
@@ -592,6 +596,14 @@
       "status": "Arbeitsbereichsstatus",
       "switchBoard": "Board wechseln",
       "selectBoard": "Board auswählen"
+    },
+    "search": {
+      "query": "Arbeitsbereich durchsuchen",
+      "mode": "Suchmodus",
+      "fileContents": "Dateiinhalte",
+      "fileNames": "Dateinamen",
+      "noResults": "Keine Treffer.",
+      "truncated": "Die ersten 100 Treffer werden angezeigt."
     },
     "compileProgress": {
       "compiling": "{{board}} wird kompiliert…",

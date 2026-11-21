@@ -91,7 +91,10 @@
       },
       "contextMenu": {
         "rename": "重命名",
-        "delete": "删除"
+        "delete": "删除",
+        "cut": "剪切",
+        "copy": "复制",
+        "paste": "粘贴"
       },
       "lastSaved": "上次保存",
       "saving": "保存中…",
@@ -580,6 +583,7 @@
       "label": "工作区视图",
       "tools": "工作区工具",
       "accountTools": "账户与设置",
+      "search": "搜索",
       "explorer": "资源管理器",
       "accountUnavailable": "此版本不支持账户功能。",
       "terminal": "终端",
@@ -592,6 +596,14 @@
       "status": "工作区状态",
       "switchBoard": "切换开发板",
       "selectBoard": "选择开发板"
+    },
+    "search": {
+      "query": "搜索工作区",
+      "mode": "搜索模式",
+      "fileContents": "文件内容",
+      "fileNames": "文件名",
+      "noResults": "没有匹配项。",
+      "truncated": "显示前 100 个匹配项。"
     },
     "compileProgress": {
       "compiling": "正在编译 {{board}}…",

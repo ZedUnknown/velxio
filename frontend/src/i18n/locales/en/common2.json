@@ -90,6 +90,9 @@
         "idle": "Idle"
       },
       "contextMenu": {
+        "cut": "Cut",
+        "copy": "Copy",
+        "paste": "Paste",
         "rename": "Rename",
         "delete": "Delete"
       },
@@ -614,6 +617,7 @@
       "label": "Workspace views",
       "tools": "Workspace tools",
       "accountTools": "Account and settings",
+      "search": "Search",
       "explorer": "Explorer",
       "accountUnavailable": "Accounts are unavailable in this build.",
       "terminal": "Terminal",
@@ -626,6 +630,14 @@
       "status": "Workspace status",
       "switchBoard": "Switch board",
       "selectBoard": "Select board"
+    },
+    "search": {
+      "query": "Search workspace",
+      "mode": "Search mode",
+      "fileContents": "File contents",
+      "fileNames": "File names",
+      "noResults": "No matches.",
+      "truncated": "Showing the first 100 matches."
     }
   },
   "about": {

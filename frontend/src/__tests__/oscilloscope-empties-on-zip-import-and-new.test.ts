@@ -171,7 +171,7 @@ describe('importing a Wokwi .zip empties the scope', () => {
 
   it("through the file explorer's Open project", async () => {
     probedScope();
-    act(() => root.render(createElement(FileExplorer, { onSaveClick: () => {}, onNewClick: () => {} })));
+    act(() => root.render(createElement(FileExplorer, { onShowExplorer: () => {} })));
     await pick(projectInput(), await wokwiZip());
     // It asks before replacing the workspace.
     await until('the confirm dialog', () => {

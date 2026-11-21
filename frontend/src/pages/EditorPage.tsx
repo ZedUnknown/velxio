@@ -16,7 +16,7 @@ import { getLocaleFromPath, localizedPath } from '../i18n/path';
 import { restoreStashedWorkspace } from '../utils/workspaceDraft';
 import { whenNewsClear } from '../lib/newsGate';
 import {
-  WorkspaceActivityBar, WorkspaceToolButton,
+  WorkspaceActivityBar, WorkspaceToolButton, WorkspaceSearch,
   type WorkspaceTool, type WorkspaceView,
 } from '../components/editor/WorkspaceSidebar';
 
@@ -82,7 +82,7 @@ export const EditorPage: React.FC = () => {
     url: 'https://velxio.dev/editor',
   });
 
-  const autoSave = useAutoSaveProject();
+  useAutoSaveProject();
   const sidebarView = useEditorPreferences((state) => state.sidebarView);
   const savedExplorerWidth = useEditorPreferences((state) => state.sidebarWidth);
   const [draggedExplorerWidth, setDraggedExplorerWidth] = useState<number | null>(null);
@@ -349,6 +349,7 @@ export const EditorPage: React.FC = () => {
     if (isMobile) setMobileView('code');
     else if (useEditorStore.getState().viewMode === 'circuit') setViewMode('code');
   }, [isMobile, setExplorerOpen, setViewMode, updatePreferences]);
+  const openExplorer = useCallback(() => openWorkspaceView('explorer'), [openWorkspaceView]);
 
   const selectWorkspaceView = (view: WorkspaceView) => {
     if (view === sidebarView && explorerOpen && codeVisible) setExplorerOpen(false);
@@ -393,6 +394,16 @@ export const EditorPage: React.FC = () => {
     useOscilloscopeStore.getState().toggleOscilloscope();
   };
 
+  useEffect(() => {
+    const openSearch = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== 'p') return;
+      event.preventDefault();
+      openWorkspaceView('search');
+      requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.workspace-search input')?.focus());
+    };
+    window.addEventListener('keydown', openSearch);
+    return () => window.removeEventListener('keydown', openSearch);
+  }, [openWorkspaceView]);
 
   // Track mobile breakpoint
   useEffect(() => {
@@ -745,8 +756,11 @@ export const EditorPage: React.FC = () => {
             {/* Keep the explorer mounted so File > Import and New File can
                 still use its picker and tree when another view is selected. */}
             <div className="workspace-explorer-view" hidden={sidebarView !== 'explorer'}>
-              <FileExplorer onSaveClick={handleSaveClick} onNewClick={handleNewClick} autoSave={autoSave} />
+              <FileExplorer onShowExplorer={openExplorer} />
             </div>
+            {sidebarView === 'search' && <WorkspaceSearch onOpen={() => {
+              if (isMobile) setExplorerOpen(false);
+            }} />}
           </aside>
           {!isMobile && (
             <div

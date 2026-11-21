@@ -91,7 +91,10 @@
       },
       "contextMenu": {
         "rename": "Renombrar",
-        "delete": "Eliminar"
+        "delete": "Eliminar",
+        "cut": "Cortar",
+        "copy": "Copiar",
+        "paste": "Pegar"
       },
       "lastSaved": "guardado por última vez",
       "saving": "guardando…",
@@ -587,6 +590,7 @@
       "label": "Vistas del espacio de trabajo",
       "tools": "Herramientas del espacio de trabajo",
       "accountTools": "Cuenta y configuración",
+      "search": "Buscar",
       "explorer": "Explorador",
       "accountUnavailable": "Las cuentas no están disponibles en esta versión.",
       "terminal": "Terminal",
@@ -599,6 +603,14 @@
       "status": "Estado del espacio de trabajo",
       "switchBoard": "Cambiar de placa",
       "selectBoard": "Seleccionar placa"
+    },
+    "search": {
+      "query": "Buscar en el espacio de trabajo",
+      "mode": "Modo de búsqueda",
+      "fileContents": "Contenido de archivos",
+      "fileNames": "Nombres de archivo",
+      "noResults": "No hay coincidencias.",
+      "truncated": "Se muestran las primeras 100 coincidencias."
     },
     "compileProgress": {
       "compiling": "Compilando {{board}}…",
