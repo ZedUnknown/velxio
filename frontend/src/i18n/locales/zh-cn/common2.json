@@ -462,8 +462,27 @@
         "none": "无行尾",
         "nl": "换行",
         "cr": "回车",
-        "both": "换行和回车"
-      }
+        "both": "换行和回车",
+        "label": "行结束符"
+      },
+      "source": "串口来源",
+      "simulation": "仿真",
+      "hardware": {
+        "tab": "硬件",
+        "baudRate": "串口波特率",
+        "baud": "{{rate}} 波特",
+        "disconnected": "连接",
+        "connecting": "正在连接…",
+        "connected": "断开连接",
+        "disconnecting": "正在断开…",
+        "portOpen": "已连接 USB 串口",
+        "connectHint": "连接 USB 串口以监控实体开发板。",
+        "unavailable": "硬件串口需要支持 Web Serial 的浏览器，以及 HTTPS 或 localhost 连接。",
+        "clear": "清除硬件串口输出"
+      },
+      "close": "关闭串口监视器",
+      "usbCdcHint": "此控制台使用 USB 端点，终端的波特率设置不生效。",
+      "boardBaudHint": "开发板串口通信的波特率。"
     },
     "format": {
       "failed": "无法格式化文件"

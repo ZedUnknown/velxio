@@ -462,8 +462,27 @@
         "none": "Sem final de linha",
         "nl": "Nova linha",
         "cr": "Retorno de carro",
-        "both": "Ambos NL e CR"
-      }
+        "both": "Ambos NL e CR",
+        "label": "Fim de linha"
+      },
+      "source": "Fonte serial",
+      "simulation": "Simulação",
+      "hardware": {
+        "tab": "Hardware",
+        "baudRate": "Taxa de transmissão serial",
+        "baud": "{{rate}} baud",
+        "disconnected": "Conectar",
+        "connecting": "Conectando…",
+        "connected": "Desconectar",
+        "disconnecting": "Desconectando…",
+        "portOpen": "Porta serial USB conectada",
+        "connectHint": "Conecte uma porta serial USB para monitorar uma placa física.",
+        "unavailable": "É necessário um navegador com Web Serial e uma conexão HTTPS ou localhost.",
+        "clear": "Limpar saída serial do hardware"
+      },
+      "close": "Fechar monitor serial",
+      "usbCdcHint": "Este console usa um ponto de extremidade USB. A taxa de transmissão do terminal é ignorada.",
+      "boardBaudHint": "Taxa de transmissão serial da placa."
     },
     "format": {
       "failed": "Não foi possível formatar o arquivo"

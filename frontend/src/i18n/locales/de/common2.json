@@ -462,8 +462,27 @@
         "none": "Kein Zeilenende",
         "nl": "Neue Zeile",
         "cr": "Wagenrücklauf",
-        "both": "Beides NL & CR"
-      }
+        "both": "Beides NL & CR",
+        "label": "Zeilenende"
+      },
+      "source": "Serielle Quelle",
+      "simulation": "Simulation",
+      "hardware": {
+        "tab": "Hardware",
+        "baudRate": "Baudrate",
+        "baud": "{{rate}} Baud",
+        "disconnected": "Verbinden",
+        "connecting": "Verbindung wird hergestellt…",
+        "connected": "Trennen",
+        "disconnecting": "Verbindung wird getrennt…",
+        "portOpen": "USB-Seriell-Port verbunden",
+        "connectHint": "Verbinde einen USB-Seriell-Port, um ein echtes Board zu überwachen.",
+        "unavailable": "Für Hardware-Serial brauchst du Web Serial und eine HTTPS- oder localhost-Verbindung.",
+        "clear": "Hardware-Ausgabe leeren"
+      },
+      "close": "Seriellen Monitor schließen",
+      "usbCdcHint": "Diese Konsole ist ein USB-Endpunkt. Die Baudrateinstellung des Terminals hat hier keine Wirkung.",
+      "boardBaudHint": "Serielle Baudrate des Boards."
     },
     "format": {
       "failed": "Die Datei konnte nicht formatiert werden"

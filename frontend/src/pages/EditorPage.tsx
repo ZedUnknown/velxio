@@ -24,7 +24,7 @@ import {
 import { CompilationConsole } from '../components/editor/CompilationConsole';
 import { CompileProgressCard } from '../components/editor/CompileProgressCard';
 import { SimulatorCanvas } from '../components/simulator/SimulatorCanvas';
-import { SerialMonitor } from '../components/simulator/SerialMonitor';
+import { SerialMonitor, type SerialMonitorSource } from '../components/simulator/SerialMonitor';
 import { Oscilloscope } from '../components/simulator/Oscilloscope';
 import { AppHeader } from '../components/layout/AppHeader';
 import { triggerSaveAction } from '../lib/proSaveAction';
@@ -111,6 +111,7 @@ export const EditorPage: React.FC = () => {
   const viewToggleRef = useRef<HTMLDivElement>(null);
   const stopResize = useRef<(() => void) | null>(null);
   const serialMonitorOpen = useSimulatorStore((s) => s.serialMonitorOpen);
+  const [serialSource, setSerialSource] = useState<SerialMonitorSource>('simulation');
   const componentCount = useSimulatorStore((state) => state.components.length);
   const componentCountLabel = t('editor.canvas.componentCount', { count: componentCount });
   const boardChoices = useSimulatorStore((state) => showBoardPicker ? state.boards : undefined);
@@ -373,6 +374,7 @@ export const EditorPage: React.FC = () => {
       else setViewMode('both');
     }
     if (!serialMonitorOpen) {
+      setSerialSource('simulation');
       useSimulatorStore.getState().toggleSerialMonitor();
       trackToggleSerialMonitor(true);
     }
@@ -380,6 +382,7 @@ export const EditorPage: React.FC = () => {
 
   const closeSerialMonitor = () => {
     useSimulatorStore.getState().toggleSerialMonitor();
+    setSerialSource('simulation');
     trackToggleSerialMonitor(false);
   };
 
@@ -899,6 +902,9 @@ export const EditorPage: React.FC = () => {
               />
               <div style={{ height: bottomPanelHeights.serial, flexShrink: 0 }}>
                 <SerialMonitor
+                  key={workspaceVersion}
+                  source={serialSource}
+                  onSourceChange={setSerialSource}
                   onClose={closeSerialMonitor}
                 />
               </div>

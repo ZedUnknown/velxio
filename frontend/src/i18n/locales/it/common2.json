@@ -462,8 +462,27 @@
         "none": "Nessun terminatore",
         "nl": "Newline",
         "cr": "Carriage return",
-        "both": "Entrambi NL e CR"
-      }
+        "both": "Entrambi NL e CR",
+        "label": "Fine riga"
+      },
+      "source": "Sorgente seriale",
+      "simulation": "Simulazione",
+      "hardware": {
+        "tab": "Hardware",
+        "baudRate": "Velocità in baud",
+        "baud": "{{rate}} baud",
+        "disconnected": "Connetti",
+        "connecting": "Connessione…",
+        "connected": "Disconnetti",
+        "disconnecting": "Disconnessione…",
+        "portOpen": "Porta seriale USB connessa",
+        "connectHint": "Connetti una porta seriale USB per monitorare una scheda fisica.",
+        "unavailable": "Serve un browser con Web Serial e una connessione HTTPS o localhost.",
+        "clear": "Cancella output hardware"
+      },
+      "close": "Chiudi monitor seriale",
+      "usbCdcHint": "Questa console usa un endpoint USB. Il baud rate del terminale viene ignorato.",
+      "boardBaudHint": "Velocità seriale della scheda."
     },
     "format": {
       "failed": "Impossibile formattare il file"

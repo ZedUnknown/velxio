@@ -462,8 +462,27 @@
         "none": "Pas de fin de ligne",
         "nl": "Nouvelle ligne",
         "cr": "Retour chariot",
-        "both": "NL et CR"
-      }
+        "both": "NL et CR",
+        "label": "Fin de ligne"
+      },
+      "source": "Source série",
+      "simulation": "Simulation",
+      "hardware": {
+        "tab": "Matériel",
+        "baudRate": "Débit série",
+        "baud": "{{rate}} bauds",
+        "disconnected": "Connecter",
+        "connecting": "Connexion…",
+        "connected": "Déconnecter",
+        "disconnecting": "Déconnexion…",
+        "portOpen": "Port série USB connecté",
+        "connectHint": "Connectez un port série USB pour surveiller une carte physique.",
+        "unavailable": "Le suivi série du matériel nécessite Web Serial et une connexion HTTPS ou localhost.",
+        "clear": "Effacer la sortie du matériel"
+      },
+      "close": "Fermer le moniteur série",
+      "usbCdcHint": "Cette console utilise un point de terminaison USB. Le réglage du débit du terminal est ignoré.",
+      "boardBaudHint": "Débit série de la carte."
     },
     "format": {
       "failed": "Impossible de formater le fichier"

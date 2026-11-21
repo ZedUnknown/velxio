@@ -462,8 +462,27 @@
         "none": "改行なし",
         "nl": "改行",
         "cr": "キャリッジリターン",
-        "both": "NL と CR の両方"
-      }
+        "both": "NL と CR の両方",
+        "label": "改行コード"
+      },
+      "source": "シリアルの入力元",
+      "simulation": "シミュレーション",
+      "hardware": {
+        "tab": "ハードウェア",
+        "baudRate": "ボーレート",
+        "baud": "{{rate}} ボー",
+        "disconnected": "接続",
+        "connecting": "接続中…",
+        "connected": "切断",
+        "disconnecting": "切断中…",
+        "portOpen": "USB シリアル接続済み",
+        "connectHint": "実機を監視するには USB シリアルポートに接続してください。",
+        "unavailable": "ハードウェアシリアルには Web Serial 対応ブラウザーと HTTPS または localhost が必要です。",
+        "clear": "ハードウェアの出力を消去"
+      },
+      "close": "シリアルモニターを閉じる",
+      "usbCdcHint": "このコンソールは USB エンドポイントです。端末のボーレート設定は無視されます。",
+      "boardBaudHint": "ボードのシリアル通信速度です。"
     },
     "format": {
       "failed": "ファイルをフォーマットできませんでした"

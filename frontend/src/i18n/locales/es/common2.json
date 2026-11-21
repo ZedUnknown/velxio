@@ -469,8 +469,27 @@
         "none": "Sin fin de línea",
         "nl": "Nueva línea",
         "cr": "Retorno de carro",
-        "both": "Ambos NL y CR"
-      }
+        "both": "Ambos NL y CR",
+        "label": "Fin de línea"
+      },
+      "source": "Fuente de datos serie",
+      "simulation": "Simulación",
+      "hardware": {
+        "tab": "Hardware",
+        "baudRate": "Velocidad en baudios",
+        "baud": "{{rate}} baudios",
+        "disconnected": "Conectar",
+        "connecting": "Conectando…",
+        "connected": "Desconectar",
+        "disconnecting": "Desconectando…",
+        "portOpen": "Puerto serie USB conectado",
+        "connectHint": "Conecta un puerto serie USB para supervisar una placa física.",
+        "unavailable": "Se necesita Web Serial y una conexión HTTPS o localhost.",
+        "clear": "Borrar salida del dispositivo"
+      },
+      "close": "Cerrar monitor serie",
+      "usbCdcHint": "Esta consola usa un punto de conexión USB. El ajuste de baudios del terminal no se aplica.",
+      "boardBaudHint": "Velocidad serie de la placa."
     },
     "format": {
       "failed": "No se pudo formatear el archivo"
