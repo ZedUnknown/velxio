@@ -35,7 +35,6 @@ describe.each([
         componentId,
         componentMetadata: metadata,
         componentProperties: { key },
-
         pinInfo: [],
         onClose,
         onDelete: vi.fn(),
@@ -44,7 +43,7 @@ describe.each([
       };
       const dialog =
         Dialog === ComponentPropertyDialog
-          ? createElement(ComponentPropertyDialog, props)
+          ? createElement(ComponentPropertyDialog, { ...props, position: { x: 0, y: 0 } })
           : createElement(PartInspectorDialog, props);
       act(() => root.render(dialog));
     };
