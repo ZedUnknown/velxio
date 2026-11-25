@@ -219,7 +219,11 @@
       "boards": "Платы",
       "loading": "Загрузка компонентов...",
       "noResults": "Компоненты не найдены",
-      "clearFilters": "Очистить фильтры"
+      "clearFilters": "Очистить фильтры",
+      "categoriesTree": "Категории",
+      "recentlyUsed": "Недавно использованные",
+      "searchResults": "Результаты поиска",
+      "searchChip": "Поиск"
     },
     "libraryManager": {
       "title": "МЕНЕДЖЕР БИБЛИОТЕК",

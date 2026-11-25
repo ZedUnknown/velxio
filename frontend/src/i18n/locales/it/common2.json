@@ -219,7 +219,11 @@
       "boards": "Schede",
       "loading": "Caricamento componenti...",
       "noResults": "Nessun componente trovato",
-      "clearFilters": "Cancella filtri"
+      "clearFilters": "Cancella filtri",
+      "categoriesTree": "Categorie",
+      "recentlyUsed": "Usati di recente",
+      "searchResults": "Risultati di ricerca",
+      "searchChip": "Ricerca"
     },
     "libraryManager": {
       "title": "GESTORE LIBRERIE",

@@ -219,7 +219,11 @@
       "boards": "板",
       "loading": "加载元件中...",
       "noResults": "未找到元件",
-      "clearFilters": "清除筛选"
+      "clearFilters": "清除筛选",
+      "categoriesTree": "类别",
+      "recentlyUsed": "最近使用",
+      "searchResults": "搜索结果",
+      "searchChip": "搜索"
     },
     "libraryManager": {
       "title": "库管理器",
