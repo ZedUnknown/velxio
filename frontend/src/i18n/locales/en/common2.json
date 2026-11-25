@@ -54,7 +54,8 @@
         "title": "Flash to a real board over USB",
         "pick": "Flash which board?",
         "active": "active"
-      }
+      },
+      "dismissError": "Dismiss error"
     },
     "fileExplorer": {
       "workspace": "WORKSPACE",

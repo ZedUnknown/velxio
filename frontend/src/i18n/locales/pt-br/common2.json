@@ -54,7 +54,8 @@
         "title": "Gravar em uma placa real via USB",
         "pick": "Qual placa gravar?",
         "active": "ativa"
-      }
+      },
+      "dismissError": "Fechar erro"
     },
     "fileExplorer": {
       "workspace": "WORKSPACE",
