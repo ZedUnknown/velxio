@@ -12,12 +12,13 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useThemeMode } from '../../hooks/useTheme';
+import { useActiveWorkspaceTheme, useThemeMode } from '../../hooks/useTheme';
 import { isLocale, LOCALES, LOCALE_META } from '../../i18n/config';
 import { getLocaleFromPath, switchLocale } from '../../i18n/path';
 import { useEditorPreferences, type EditorPreferences, type Indentation } from '../../store/useEditorPreferences';
 import { DropdownSelect } from '../ui/DropdownSelect';
 import { SearchBar } from '../ui/SearchBar';
+import { WorkspaceThemeSettings } from './WorkspaceThemeSettings';
 import './EditorSettings.css';
 
 type SettingsSection = 'appearance' | 'editor' | 'indentation' | 'files';
@@ -37,6 +38,7 @@ export function EditorSettings({ onClose, onIndentationChange }: {
   const { t } = useTranslation();
   const settings = useEditorPreferences();
   const [theme, setTheme] = useThemeMode();
+  const customTheme = useActiveWorkspaceTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const locale = getLocaleFromPath(location.pathname);
@@ -101,7 +103,7 @@ export function EditorSettings({ onClose, onIndentationChange }: {
                     <input
                       type="radio"
                       name="editor-theme"
-                      checked={theme === value}
+                      checked={!customTheme && theme === value}
                       onChange={() => setTheme(value)}
                     />
                     <span
@@ -112,12 +114,21 @@ export function EditorSettings({ onClose, onIndentationChange }: {
                     </span>
                     <span className="editor-settings-theme-label">
                       {label}
-                      {theme === value && <Check size={13} aria-hidden />}
+                      {!customTheme && theme === value && <Check size={13} aria-hidden />}
                     </span>
                   </label>
                 ))}
               </div>
             ),
+          },
+          {
+            id: 'custom-theme',
+            label: t('editor.settings.customTheme', 'Custom theme'),
+            description: t(
+              'editor.settings.customThemeHelp',
+              'Import a Velxio or VS Code color theme. Missing colors use the corresponding built-in light or dark theme.',
+            ),
+            field: <WorkspaceThemeSettings />,
           },
           {
             id: 'interface-language',
