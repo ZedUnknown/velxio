@@ -13,7 +13,11 @@
         "runMicropython": "Run MicroPython",
         "run": "Run (auto-compiles if needed)",
         "runActiveOnly": "Run only {{name}}",
-        "options": "Run options"
+        "options": "Run options",
+        "verifying": "Checking circuit...",
+        "emptyCircuit": "Add a board or component to run",
+        "digitalRunning": "Digital simulation running",
+        "resumeDigital": "Resume digital simulation"
       },
       "stop": "Stop",
       "reset": "Reset",
@@ -199,7 +203,8 @@
         "rotate": "Rotate (R)",
         "copy": "Copy board (Ctrl+C)",
         "paste": "Paste (Ctrl+V)"
-      }
+      },
+      "circuitCanvas": "Circuit canvas"
     },
     "componentPicker": {
       "title": "Add Component",
@@ -514,7 +519,12 @@
       "appearance": "Appearance",
       "themeDark": "Dark",
       "themeLight": "Light",
-      "themeSystem": "Match system"
+      "themeSystem": "Match system",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "find": "Find",
+      "replace": "Replace"
     },
     "inspector": {
       "propertiesTab": "Properties",
