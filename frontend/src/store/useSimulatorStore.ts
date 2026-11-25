@@ -46,6 +46,7 @@ import { Stm32Bridge, stm32PinNameToLinear } from '../simulation/Stm32Bridge';
 import { STM32_LED } from '../components/velxio-components/Stm32BluePillElement';
 import { useEditorStore } from './useEditorStore';
 import { fingerprintSources, type BoardBuildSettings } from '../utils/sourceFingerprint';
+import type { SavedWorkspaceFile } from '../utils/savedWorkspaceFile';
 import { useVfsStore } from './useVfsStore';
 import { b64ToBytes, buildProjectSdImage, decodeSdFiles, bytesToB64 } from '../utils/sdCardFiles';
 import {
@@ -1721,7 +1722,7 @@ interface SimulatorState {
    *  endpoints remain valid), restores file groups, components, wires. */
   loadProjectState: (payload: {
     boards: BoardInstance[];
-    fileGroups: Record<string, { name: string; content: string }[]>;
+    fileGroups: Record<string, SavedWorkspaceFile[]>;
     folderGroups?: Record<string, string[]>;
     components: Component[];
     wires: Wire[];
@@ -3753,6 +3754,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => {
         // Apply the rest of the saved fields that addBoard doesn't set.
         const patch: Partial<BoardInstance> = {};
         if (b.languageMode && b.languageMode !== 'arduino') patch.languageMode = b.languageMode;
+        if (Number.isFinite(b.serialBaudRate) && b.serialBaudRate > 0) patch.serialBaudRate = b.serialBaudRate;
         if (b.name && b.name.trim()) patch.name = b.name;
         if (b.rotation) patch.rotation = normalizeRotation(b.rotation);
         // A board plugged into a breadboard: its seat wires ride in `wires`,
@@ -3767,7 +3769,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => {
         if (b.boardOptions) patch.boardOptions = b.boardOptions;
         if (b.spiffsFiles) patch.spiffsFiles = b.spiffsFiles;
         if (b.sdFiles?.length) patch.sdFiles = b.sdFiles;
-        if (b.libraries && b.libraries.length) patch.libraries = b.libraries;
+        if (Array.isArray(b.libraries)) patch.libraries = b.libraries;
         if (Object.keys(patch).length > 0) {
           set((s) => ({
             boards: s.boards.map((bb) => (bb.id === b.id ? { ...bb, ...patch } : bb)),

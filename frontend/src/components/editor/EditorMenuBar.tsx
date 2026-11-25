@@ -135,6 +135,8 @@ export const EditorMenuBar: React.FC<{
       label: t('header.auth.myProjects', 'My projects'),
       optional: true,
     },
+    { kind: 'command', id: 'project.openLocal', label: t('editor.menu.openLocal', 'Open local project…') },
+    { kind: 'command', id: 'project.openDisk', label: t('editor.menu.openDisk', 'Open .vlx from disk…'), optional: true },
     { kind: 'command', id: 'project.open', label: t('editor.menu.importFromDisk', 'Import from disk…') },
     {
       kind: 'command',
@@ -142,6 +144,7 @@ export const EditorMenuBar: React.FC<{
       label: t('editor.menu.save', 'Save project'),
       shortcut: 'Ctrl+S',
     },
+    { kind: 'command', id: 'project.saveAs', label: t('editor.menu.saveAs', 'Save As…'), optional: true },
     { kind: 'separator' },
     { kind: 'command', id: 'project.import', label: t('editor.toolbar.importLabel', 'Import project') },
     { kind: 'command', id: 'project.exportVlx', label: t('editor.toolbar.exportVlxLabel', 'Export project (.vlx)') },
